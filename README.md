@@ -46,6 +46,8 @@ torchrun --nproc_per_node 1 -m finetune.main \
     --log-every-n-steps 100
 ```
 
+Additional Scripts can be found in `scripts/`, I will try to make slurm and sh pairs for every script so that it can easily be run on tacc.
+
 ## Adding New Finetuning Methods
 Go to `finetune.configure_finetune` in order to add a new method to finetune clip models. Currently the following
 methods are supported.
