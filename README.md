@@ -1,5 +1,16 @@
 # Finetune Clip
 
+## Installing
+Run the following
+```bash
+cd open_clip/
+make install
+```
+Then install pytorch and torchvision and run.
+```bash
+make install-training
+```
+
 ## Current Project Structure
 
 Benchmarks: retrieval benchmarks
