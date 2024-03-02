@@ -13,6 +13,7 @@ torchrun --nproc_per_node 1 -m finetune.main \
     --epochs 1 \
     --workers 2 \
     --model "ViT-B-32" \
+    --pretrained "openai" \
     --lora "1:1"
 
 #    --report-to "wandb" \

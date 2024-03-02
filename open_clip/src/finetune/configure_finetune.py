@@ -58,6 +58,11 @@ def configure_model(model: Union[CLIP, CustomTextCLIP], args, logger=None) -> CL
 
         # TODO: Add Layerwise Customization to LoRA
         """
+        # Freeze Model
+        for n, p in model.named_parameters():
+            p.requires_grad = False
+
+        # Add LoRa Modules
         rank, alpha = args.lora.split(':')
         register_lora_clip(model, rank=int(rank), alpha=int(alpha))
 
