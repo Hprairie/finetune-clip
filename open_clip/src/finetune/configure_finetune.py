@@ -22,9 +22,9 @@ def configure_model(model: Union[CLIP, CustomTextCLIP], args, logger=None) -> CL
         probing_type, config = linear_probing[0], linear_probing[1:]
         match probing_type:
             case 'projection':
-                pass
+                assert NotImplementedError
             case 'mlp':
-                pass
+                assert NotImplementedError
 
     if args.freeze_layers is not None:
         """#Assumes that freeze_layers is passed as a string in the following format:
