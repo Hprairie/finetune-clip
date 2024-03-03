@@ -13,17 +13,18 @@ make install-training
 
 ## Current Project Structure
 
-Benchmarks: retrieval benchmarks
-- Need to check but can just use clip-benchmark for all retrieval benchmarks
+Benchmarks: Separate scripts and files for testing all open_clip models
 
-Misc-Testing : random visualizations
+Misc-Testing: random visualizations
 
-Scripts : Scripts to finetune CLIP
+Scripts: Scripts to finetune CLIP
 
-Open-Clip : src
+Benchmark-scripts: Scripts to run benchmarks on different CLIP models
+
+Open-Clip: src
 
 ## Running Finetuning Scripts
-Very similar to open_clip, but with a seperate script for finetuning instead of training. i.e.
+Very similar to open_clip, but with a separate script for finetuning instead of training. i.e.
 
 ```bash
 export MASTER_PORT=12802
@@ -52,10 +53,21 @@ Additional Scripts can be found in `scripts/`, I will try to make slurm and sh p
 Go to `finetune.configure_finetune` in order to add a new method to finetune clip models. Currently the following
 methods are supported.
 
-- LoRA
-- Linear Probing
-- Layer Freezing
+- LoRA (Done and tested)
+- Linear Probing (Not Implemented yet)
+- Layer Freezing (Done but untested)
 
-## Things that need to be done
-- Add Huggingface finetuning support for LoRA
-- Add a nice way to append linear-probe to a model
+## TODO List
+- [x] Add LoRA finetuning
+- [x] Test LoRA finetuning
+- [x] Add Layerwise finetuning
+- [ ] Test Layerwise finetuning
+- [ ] Add Hugginface support for LoRA
+- [ ] Add Linear Probing Finetuning
+- [ ] Test Linear Probing Fintuning
+- [ ] Add Benchmarking for Colbert
+      - Mostly done just need to also add fine-tuned model support
+- [ ] Add new Loss function for fine-grain training
+    - [ ] Sparc
+    - [ ] Colbert
+- [ ] Add more template scripts
