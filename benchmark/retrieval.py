@@ -7,8 +7,8 @@ import collections
 
 
 def recall_at_k(
-        image_encoding,
-        text_encoddings,
+        image_encodings,
+        text_encodings,
         text_to_image_map,
         image_to_text_map,
         patch_to_image_map,
@@ -25,6 +25,7 @@ def recall_at_k(
     captions_per_image = image_to_text_map.shape[1]
     
     print(image_encodings.shape)
+    print(text_encodings.shape)
 
     # Create a hnswlib index for the image embeddings
     dim = image_encodings.shape[1]
@@ -75,6 +76,7 @@ def recall_at_k(
                     image_matches.add(parent_image)
                     
             # For all found image's calculate the similarity scores
+            import pdb; pdb.set_trace()
             top_k_images = collections.defaultdict(float)
             for match in range(len(image_matches)): # <- Parallelize this and increase batch_size
                 # Get patch embeddings

@@ -33,14 +33,14 @@ def main(args):
     # Run Retrieval Benchmark
     print("Running Benchmark...")
     results = recall_at_k(
-            image_encoding,
-            text_encoddings,
+            image_encodings,
+            text_encodings,
             text_to_image_map,
             image_to_text_map,
             patch_to_image_map,
             text_to_encoding_map,
             args.k,
-            args.batch_size
+            args.batchsize
     )
 
     # Save results

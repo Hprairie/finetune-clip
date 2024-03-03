@@ -38,8 +38,12 @@ def encode_dataset(
     text_to_encoding_map = {}
 
     dataloader = dutils.DataLoader(dataset, batch_size=batch_size, shuffle=False)
+    count = 0
     
     for images, text in tqdm(dataloader):
+        if count > 2:
+            break
+        count += 1
         images = images.to(device)
         text = text.to(device)
         
