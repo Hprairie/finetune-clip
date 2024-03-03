@@ -68,7 +68,6 @@ def get_latest_checkpoint(path: str, remote : bool):
         return checkpoints[-1]
     return None
 
-
 def main(args):
     args = parse_args(args)
     args.distill = None
@@ -216,6 +215,7 @@ def main(args):
     if args.siglip:
         model_kwargs['init_logit_scale'] = np.log(10)  # different from CLIP
         model_kwargs['init_logit_bias'] = -10
+
     model, preprocess_train, preprocess_val = create_model_and_transforms(
         args.model,
         args.pretrained,
@@ -233,8 +233,11 @@ def main(args):
         aug_cfg=args.aug_cfg,
         pretrained_image=args.pretrained_image,
         output_dict=True,
+        finetune_args=args, # This is lazy but idc
         **model_kwargs,
     )
+
+
     if args.use_bnb_linear is not None:
         print('=> using a layer from bitsandbytes.\n'
               '   this is an experimental feature which requires two extra pip installs\n'
@@ -246,8 +249,6 @@ def main(args):
         linear_replacement_cls = getattr(bnb.nn.triton_based_modules, args.use_bnb_linear)
         replace_linear(model, linear_replacement_cls)
         model = model.to(device)
-
-    configure_model(model, args) # <- Current gateway to editing model
 
     random_seed(args.seed, args.rank)
 
@@ -434,6 +435,7 @@ def main(args):
                 "state_dict": original_model.state_dict(),
                 "optimizer": optimizer.state_dict(),
             }
+            
             if scaler is not None:
                 checkpoint_dict["scaler"] = scaler.state_dict()
 

@@ -6,6 +6,7 @@ from typing import List
 import clip
 import collections
 import json
+import argparse
 
 # Change these to path of local COCO dataset:
 coco_root = "$DATASETS/coco/images/val2017"
@@ -24,13 +25,6 @@ with open(coco_ann_file, 'r') as f:
         
     print(json.dumps(list_image_path, indent=4))
         
-# captions_images = collections.defaultdict(int)
-# for i, item in enumerate(input_data):
-#     img_number = "{:012d}.jpg".format(item["image_id"])
-    
-#     caption = item['caption']
-#     list_image_path[img_path].append(i)
-#     list_txt.append(caption)
 
 dataset = CocoCaptions(
     root=coco_root,

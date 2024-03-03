@@ -9,5 +9,10 @@ def projection_probing(
         model: Union[CLIP, CustomTextCLIP],
         output_dim: int
         ):
-    # Kinda Hacky, but just swapping the final project parameter
+    pass
+
+def mlp_probing(
+        model: Union[CLIP, CustomTextCLIP],
+        output_dim: int
+        ):
     pass

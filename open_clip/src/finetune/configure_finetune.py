@@ -5,10 +5,42 @@ import torch.nn as nn
 import torch.nn.functional as F
 from open_clip.model import CLIP, CustomTextCLIP
 from training.params import parse_args
-from .lora import register_lora_clip
+from .lora import register_lora_clip, LoRaModule
 
 
 def configure_model(model: Union[CLIP, CustomTextCLIP], args, logger=None) -> CLIP:
+    """#Function which augments CLIP and CustomTextCLIP objects and adds new modules
+    to finetune the model. For several features, this function will overwrite the 
+    forward function of the model in order add additional functionality.
+
+    Notes:
+        -> When adding new modules to Model, will create a new feature called
+        called finetune-modules, which allows for easy stripping and saving.
+            -> Will also add a new feature to determine if we should save the
+            base model.
+        -> When trying to nest new features within model use reparamaterize
+        if possible.
+        -> Worst case just overwrite the forward function of the desired class
+            ** Use this sparingly **
+
+    * Linear Probing:
+        -> Not IMPLEMENTED, can't come up with a nice way to to it without doing
+        something super hacky. Will probably just go into existing classes and edit
+        the information.
+
+    * Freeze Layers:
+        -> Working
+
+    * LoRA:
+        -> Working
+
+    """
+    if args is None:
+        return
+
+    save_full_model = False
+    finetune_modules = []
+
     if args.linear_probing is not None:
         """#Assumes that linear-probing is passed as a string in the following format:
 
@@ -19,7 +51,7 @@ def configure_model(model: Union[CLIP, CustomTextCLIP], args, logger=None) -> CL
         assert any(s in args.linear_probing for s in ['projection', 'mlp'])
 
         linear_probing = args.linear_probing.split(':')
-        probing_type, config = linear_probing[0], linear_probing[1:]
+        probing_type, config = linear_probing[0], [int(x) for x in linear_probing[1:]]
         match probing_type:
             case 'projection':
                 assert NotImplementedError
@@ -51,6 +83,8 @@ def configure_model(model: Union[CLIP, CustomTextCLIP], args, logger=None) -> CL
                 else:
                     model.transformer.lock(unlocked_groups=layers, freeze_bn_stats=True)
 
+        save_full_model = True
+
     if args.lora is not None:
         """#Assumes that lora is passed as a str with the following format:
 
@@ -64,5 +98,15 @@ def configure_model(model: Union[CLIP, CustomTextCLIP], args, logger=None) -> CL
 
         # Add LoRa Modules
         rank, alpha = args.lora.split(':')
-        register_lora_clip(model, rank=int(rank), alpha=int(alpha))
+        register_lora_clip(model, rank=int(rank), alpha=float(alpha))
+
+        # Iterate through modules and add LoRA modules to list of finetune modules
+        for module in model.modules():
+            if isinstance(module, LoRaModule):
+                finetune_modules.append(module)
+
+    # Register the save parameters to the model
+    model.save_full_model = save_full_model
+    model.fintune_modules = finetune_modules
+
 

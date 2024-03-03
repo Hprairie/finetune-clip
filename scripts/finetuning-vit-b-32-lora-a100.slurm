@@ -26,12 +26,12 @@ export MASTER_PORT=12802
 master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)
 export MASTER_ADDR=$master_addr
 
-cd $WORK/projects/retrival-clip
+cd $WORK/projects/retrieval-clip
 srun --cpu_bind=v --accel-bind=gn python -m finetune.main \
     --dataset-type "csv" \
     --train-data "$DATASETS/coco/annotations/captions_train2017.csv" \
     --warmup 1000 \
-    --batch-size 256 \
+    --batch-size 128 \
     --lr 1e-5 \
     --wd 0.1 \
     --epochs 1 \
@@ -41,7 +41,7 @@ srun --cpu_bind=v --accel-bind=gn python -m finetune.main \
     --pretrained "openai" \
     --lora "4:1" \
     --report-to "wandb" \
-    --wanb-project-name "ViT-B-32-LoRA" \
+    --wandb-project-name "ViT-B-32-Finetune" \
     --log-every-n-steps 100
 
 # ---------------------------------------------------

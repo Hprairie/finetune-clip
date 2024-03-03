@@ -7,7 +7,7 @@ torchrun --nproc_per_node 1 -m finetune.main \
     --dataset-type "csv" \
     --train-data "$DATASETS/coco/annotations/captions_train2017.csv" \
     --warmup 1000 \
-    --batch-size 256 \
+    --batch-size 128 \
     --lr 1e-5 \
     --wd 0.1 \
     --epochs 1 \
@@ -17,5 +17,5 @@ torchrun --nproc_per_node 1 -m finetune.main \
     --pretrained "openai" \
     --lora "4:1" \
     --report-to "wandb" \
-    --wandb-project-name "ViT-B-32-LoRA" \
+    --wandb-project-name "ViT-B-32-Finetune" \
     --log-every-n-steps 100
