@@ -65,25 +65,21 @@ def configure_model(model: Union[CLIP, CustomTextCLIP], args, logger=None) -> CL
         * image:layers          # unlocked at the end of the model
         * text:layers
         """
-        assert any(s in args.freeze for s in ['all', 'image', 'text'])
+        assert any(s in args.freeze_layers for s in ['all', 'image', 'text'])
 
-        tower, layers = args.freeze_layer.split(':')
+        tower, layers = args.freeze_layers.split(':')
+        layers = int(layers)
+        unfreeze_norm = args.unfreeze_norm
         match tower:
             case 'all':
-                model.visual.lock(unlocked_groups=layers, freeze_bn_stats=True)
-                if isinstance(model, CustomTextCLIP):
-                    model.text.lock(unlocked_groups=layers, freeze_bn_stats=True)
-                else:
-                    model.transformer.lock(unlocked_groups=layers, freeze_bn_stats=True)
+                model.lock_image_tower(unlocked_groups=layers, freeze_bn_stats=unfreeze_norm)
+                model.lock_text_tower(unlocked_groups=layers, freeze_layer_norm=unfreeze_norm)
             case 'image':
-                model.visual.lock(unlocked_groups=layers, freeze_bn_stats=True)
+                model.lock_image_tower(unlocked_groups=layers, freeze_bn_stats=unfreeze_norm)
             case 'text':
-                if isinstance(model, CustomTextCLIP):
-                    model.text.lock(unlocked_groups=layers, freeze_bn_stats=True)
-                else:
-                    model.transformer.lock(unlocked_groups=layers, freeze_bn_stats=True)
+                model.lock_text_tower(unlocked_groups=layers, freeze_layer_norm=unfreeze_norm)
 
-        save_full_model = True
+        save_full_model = True # TODO: Implement this
 
     if args.lora is not None:
         """#Assumes that lora is passed as a str with the following format:

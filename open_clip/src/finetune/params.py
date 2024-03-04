@@ -461,8 +461,14 @@ def parse_args(args):
         "--freeze-layers",
         default=None,
         type=str,
-        help="Add's LoRA Modules to a model. Use to finetune a CLIP model.\n \
-                Pass str to parameter like the following = rank:alpha"
+        help="Freeze's the model up to a specified number of layers from the ending.\n \
+                Pass str to parameter like the following = (tower):layers-left"
+    )
+    parser.add_argument(
+        "--unfreeze-norm",
+        default=False,
+        action='store_true',
+        help="Unfreeze's normalization within each of the towers if set."
     )
     parser.add_argument(
         "--linear-probing",
