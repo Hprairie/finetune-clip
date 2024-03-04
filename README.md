@@ -65,8 +65,8 @@ methods are supported.
 - [x] Add LoRA finetuning
 - [x] Test LoRA finetuning
 - [x] Add Layerwise finetuning
-- [ ] Test Layerwise finetuning
-- [ ] Add Hugginface support for LoRA
+- [x] Test Layerwise finetuning
+- [ ] Add Huggingface support for LoRA
 - [ ] Add Linear Probing Finetuning
 - [ ] Test Linear Probing Fintuning
 - [ ] Add Benchmarking for Colbert
