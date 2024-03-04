@@ -10,6 +10,10 @@ Then install pytorch and torchvision and run.
 ```bash
 make install-training
 ```
+To install the benchmarking stuff run the following in the project root.
+```bash
+make install
+```
 
 ## Current Project Structure
 
