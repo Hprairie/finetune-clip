@@ -72,6 +72,9 @@ methods are supported.
 - [ ] Add Benchmarking for Colbert
       - Mostly done just need to also add fine-tuned model support
 - [ ] Add new Loss function for fine-grain training
+    - [x] Sparc
+    - [ ] Colbert
+- [ ] Test new Loss function for fine-grain training
     - [ ] Sparc
     - [ ] Colbert
 - [ ] Add more template scripts
