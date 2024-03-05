@@ -63,6 +63,54 @@ def gather_features(
     return all_image_features, all_text_features
 
 
+def gather_embeddings( #i.e. gather tokens
+        image_embeddings,
+        text_embeddings,
+        local_loss=False,
+        gather_with_grad=False,
+        rank=0,
+        world_size=1,
+        use_horovod=False
+):
+    assert has_distributed, 'torch.distributed did not import correctly, please use a PyTorch version with support.'
+    if use_horovod:
+        assert NotImplementedError
+        assert hvd is not None, 'Please install horovod'
+        if gather_with_grad:
+            all_image_features = hvd.allgather(image_features)
+            all_text_features = hvd.allgather(text_features)
+        else:
+            with torch.no_grad():
+                all_image_features = hvd.allgather(image_features)
+                all_text_features = hvd.allgather(text_features)
+            if not local_loss:
+                # ensure grads for local rank when all_* features don't have a gradient
+                gathered_image_features = list(all_image_features.chunk(world_size, dim=0))
+                gathered_text_features = list(all_text_features.chunk(world_size, dim=0))
+                gathered_image_features[rank] = image_features
+                gathered_text_features[rank] = text_features
+                all_image_features = torch.cat(gathered_image_features, dim=0)
+                all_text_features = torch.cat(gathered_text_features, dim=0)
+    else:
+        # We gather tensors from all gpus
+        if gather_with_grad:
+            all_image_embeddings = torch.cat(torch.distributed.nn.all_gather(image_embeddings), dim=0)
+            all_text_embeddings = torch.cat(torch.distributed.nn.all_gather(text_embeddings), dim=0)
+        else:
+            gathered_image_embeddings = [torch.zeros_like(image_embeddings) for _ in range(world_size)]
+            gathered_text_embeddings = [torch.zeros_like(text_embeddings) for _ in range(world_size)]
+            dist.all_gather(gathered_image_embeddings , image_embeddings)
+            dist.all_gather(gathered_text_embeddings , text_embeddings)
+            if not local_loss:
+                # ensure grads for local rank when all_* features don't have a gradient
+                gathered_image_embeddings[rank] = image_embeddings 
+                gathered_text_embeddings[rank] = text_embeddings 
+            all_image_embeddings = torch.cat(gathered_image_embeddings, dim=0)
+            all_text_embeddings = torch.cat(gathered_text_embeddings, dim=0)
+
+    return all_image_embeddings, all_text_embeddings 
+
+
 class ClipLoss(nn.Module):
 
     def __init__(
@@ -131,6 +179,8 @@ class ClipLoss(nn.Module):
         return {"contrastive_loss": total_loss} if output_dict else total_loss
 
 class SparcLoss(nn.Module):
+    """# This requires that we have access to the tokens, this has not been implemented on
+    CustomTextTowerClip, so it will throw an error."""
 
     def __init__(
             self,
@@ -140,6 +190,8 @@ class SparcLoss(nn.Module):
             rank=0,
             world_size=1,
             use_horovod=False,
+            local_loss_weight=0.5,
+            global_loss_weight=0.5,
     ):
         super().__init__()
         self.local_loss = local_loss
@@ -184,7 +236,7 @@ class SparcLoss(nn.Module):
         
         return logits_per_image, logits_per_text
 
-    def forward(self, image_features, text_features, logit_scale, output_dict=False):
+    def forward(self, image_features, text_features, logits_per_image, logits_per_text, logit_scale, output_dict=False):
         # ---------- Global Loss ------------
         device = image_features.device
         logits_per_image, logits_per_text = self.get_logits(image_features, text_features, logit_scale)
@@ -197,6 +249,17 @@ class SparcLoss(nn.Module):
         ) / 2
 
         # ---------- Local Loss ------------
+
+        # This is unneeded for SPARC but very important for Colbert, use it later 
+        """
+        if self.local_loss:
+            logits_per_image, logits_per_text = image_embeddings, text_embeddings
+        else:
+            all_image_embeddings, all_text_embeddings = gather_embeddings(
+                    image_embeddings, text_embeddings,
+                    self.local_loss, self.gather_with_grad, self.rank, self.world_size, self.use_horovod)
+            logits_per_image, logits_per_text = all_image_embeddings, all_text_embeddings
+        """
 
         # similarity calculation
         similarity = torch.einsum('btd,bpd->btp', logits_per_text, logits_per_image)
@@ -213,7 +276,7 @@ class SparcLoss(nn.Module):
         text_grouped_image_patch_embed = torch.einsum()
 
 
-        # ---------- Local Loss ------------
+        # ---------- Total Loss ------------
         total_loss = self.global_loss_weight * global_loss + self.local_loss_weight * local_loss
         return {"contrastive_loss": total_loss} if output_dict else total_loss
 
