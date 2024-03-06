@@ -355,7 +355,9 @@ def create_loss(args):
                 cache_labels=True,
                 rank=args.rank,
                 world_size=args.world_size,
-                use_horovod=args.horovod
+                use_horovod=args.horovod,
+                local_lambda=args.sparc_local_lambda,
+                globabl_lambda=args.sparc_global_lambda
         )
     return ClipLoss(
         local_loss=args.local_loss,

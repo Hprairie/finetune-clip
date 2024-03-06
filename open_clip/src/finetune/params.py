@@ -442,11 +442,25 @@ def parse_args(args):
         action="store_true",
         help='Use SigLip (sigmoid) loss.'
     )
+
+    # ======================================================================= #
     parser.add_argument(
         "--sparc",
         default=False,
         action="store_true",
         help='Use Sparc loss.'
+    )
+    parser.add_argument(
+        "--sparce-global-lambda",
+        default=1.0,
+        type=float,
+        help="Set the global weights for sparc loss"
+    )
+    parser.add_argument(
+        "--sparce-local-lambda",
+        default=1.0,
+        type=float,
+        help="Set the local weights for sparc loss"
     )
     
     # ======================================================================= #

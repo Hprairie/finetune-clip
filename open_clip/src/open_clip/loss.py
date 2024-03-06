@@ -72,6 +72,7 @@ def gather_embeddings( #i.e. gather tokens
         world_size=1,
         use_horovod=False
 ):
+    """Used to gather the embeddings from each from the entire world"""
     assert has_distributed, 'torch.distributed did not import correctly, please use a PyTorch version with support.'
     if use_horovod:
         assert NotImplementedError
@@ -190,8 +191,8 @@ class SparcLoss(nn.Module):
             rank=0,
             world_size=1,
             use_horovod=False,
-            local_loss_weight=0.5,
-            global_loss_weight=0.5,
+            local_lambda=1.0,
+            global_lambda=1.0,
     ):
         super().__init__()
         self.local_loss = local_loss
@@ -236,8 +237,10 @@ class SparcLoss(nn.Module):
         
         return logits_per_image, logits_per_text
 
-    def forward(self, image_features, text_features, logits_per_image, logits_per_text, logit_scale, output_dict=False):
+    def forward(self, image_features, text_features, image_embeddings, text_embeddings, logit_scale, output_dict=False):
         # ---------- Global Loss ------------
+
+        #Get similarity matrix
         device = image_features.device
         logits_per_image, logits_per_text = self.get_logits(image_features, text_features, logit_scale)
 
@@ -262,7 +265,7 @@ class SparcLoss(nn.Module):
         """
 
         # similarity calculation
-        similarity = torch.einsum('btd,bpd->btp', logits_per_text, logits_per_image)
+        similarity = torch.einsum('btd,bpd->btp', text_embeddings, image_embeddings)
 
         # min-max normalization
         similarity = (similarity - torch.min(similarity, dim=-1)) /         \
@@ -273,11 +276,25 @@ class SparcLoss(nn.Module):
 
         # alignment-weighting
         image_align_weights = similarity / torch.sum(similarity, dim=-1)
-        text_grouped_image_patch_embed = torch.einsum()
+        text_grouped_image_patch_embed = torch.einsum('btp,bpd->btd', image_align_weights, image_embeddings)
 
+        # Normalize Embeddings 
+        local_image_tokens = text_grouped_image_patch_embed / text_grouped_image_patch_embed.norm(dim=-1)
+        local_text_tokens = text_embeddings / text_embeddings.norm(dim=-1)
+
+        # Take pairwise contrastive loss
+        # IDK how to do this with pytorch CrossEntropyLoss as it is nested cross-entropy
+        # This can be fixed we are doing to many extras ops
+        cross_product = einsum('btd,bpd->btp', local_text_tokens, local_image_tokens) * logit_scale
+        logits_image_token = F.softmax(cross_product, dim=2) # Take column-wise softmax
+        logits_text_token = F.softmax(cross_product, dim=1) # Take row-wise softmax
+
+        # Take Log and reduce 
+        pairwise_loss = torch.log(logits_text_token) + torch.log(logits_image_token)
+        local_loss = (-1 / pairwise_loss.shape[0]) * torch.sum(torch.einsum('btt->b', pairwise_loss) / cross_product.shape[1])
 
         # ---------- Total Loss ------------
-        total_loss = self.global_loss_weight * global_loss + self.local_loss_weight * local_loss
+        total_loss = self.global_lambda * global_loss + self.local_lambda * local_loss
         return {"contrastive_loss": total_loss} if output_dict else total_loss
 
 class CoCaLoss(ClipLoss):

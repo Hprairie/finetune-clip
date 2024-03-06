@@ -330,13 +330,14 @@ class CLIP(nn.Module):
             image: Optional[torch.Tensor] = None,
             text: Optional[torch.Tensor] = None,
             return_embeddings: Optional[bool] = False, 
+            normalize: Optional[bool] = True
     ):
         if return_embeddings:
-            image_features, image_embeddings = self.encode_image(image, normalize=True, return_tokens=True) if image is not None else None
-            text_features, text_embeddings = self.encode_text(text, normalize=True, return_tokens=True) if text is not None else None
+            image_features, image_embeddings = self.encode_image(image, normalize=normalize, return_tokens=True) if image is not None else None
+            text_features, text_embeddings = self.encode_text(text, normalize=normalize, return_tokens=True) if text is not None else None
         else:
-            image_features = self.encode_image(image, normalize=True) if image is not None else None
-            text_features = self.encode_text(text, normalize=True) if text is not None else None
+            image_features = self.encode_image(image, normalize=normalize) if image is not None else None
+            text_features = self.encode_text(text, normalize=normalize) if text is not None else None
 
         if self.output_dict:
             out_dict = {
