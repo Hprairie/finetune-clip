@@ -324,6 +324,32 @@ class Transformer(nn.Module):
                 x = r(x, attn_mask=attn_mask)
         return x
 
+    def lock(self, unlocked_groups=0, freeze_bn_stats=False):
+        for param in self.parameters():
+            param.requires_grad = False
+
+        if unlocked_groups > 0:
+            total_blocks = len(self.resblocks)
+            first_block_to_unlock = max(0, total_blocks - unlocked_groups)
+
+            for block in self.resblocks[first_block_to_unlock:]:
+                for param in block.parameters():
+                    param.requires_grad = True
+
+            if freeze_bn_stats:
+                self._freeze_bn_stats(self)
+
+    @staticmethod
+    def _freeze_bn_stats(module):
+        """
+        Recursively freezes the running stats in batch normalization layers.
+        """
+        if isinstance(module, torch.nn.modules.batchnorm._BatchNorm):
+            module.eval()  # Set the module to evaluation mode to freeze running stats
+        else:
+            for child in module.children():
+                Transformer._freeze_bn_stats(child)
+
 
 class VisionTransformer(nn.Module):
     output_tokens: torch.jit.Final[bool]
@@ -546,7 +572,6 @@ class VisionTransformer(nn.Module):
         
         return pooled
 
-
 def text_global_pool(x, text: Optional[torch.Tensor] = None, pool_type: str = 'argmax'):
     if pool_type == 'first':
         pooled, tokens = x[:, 0], x[:, 1:]
@@ -651,6 +676,35 @@ class TextTransformer(nn.Module):
     @torch.jit.ignore
     def set_grad_checkpointing(self, enable=True):
         self.transformer.grad_checkpointing = enable
+
+    def lock(self, unlocked_groups=0, freeze_bn_stats=False):
+        for param in self.parameters():
+            param.requires_grad = False
+
+        if unlocked_groups != 0:
+            groups = [
+                [self.token_embedding, self.positional_embedding],
+                *self.transformer.resblocks[:-1],
+                [self.transformer.resblocks[-1], self.ln_final],
+            ]
+            if self.cls_emb is not None:
+                groups[0].append(self.cls_emb)
+            if hasattr(self, 'text_projection') and self.text_projection is not None:
+                groups.append([self.text_projection])
+
+            # Recursively unlock parameters in the specified groups
+            def _unlock(x):
+                if isinstance(x, Sequence):
+                    for g in x:
+                        _unlock(g)
+                else:
+                    if isinstance(x, torch.nn.Parameter):
+                        x.requires_grad = True
+                    else:
+                        for p in x.parameters():
+                            p.requires_grad = True
+
+            _unlock(groups[-unlocked_groups:])
 
     def build_causal_mask(self):
         # lazily create causal attention mask, with full attention between the tokens
