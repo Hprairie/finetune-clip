@@ -271,6 +271,11 @@ def main(args):
     if is_master(args):
         logging.info("Model:")
         logging.info(f"{str(model)}")
+        unlocked_string = ''
+        for n, p in model.named_parameters():
+            unlocked_string += f'{n} {p.requires_grad}\n'
+        logging.info("Unlocked Layers:")
+        logging.info(unlocked_string)
         logging.info("Params:")
         params_file = os.path.join(args.logs, args.name, "params.txt")
         with open(params_file, "w") as f:

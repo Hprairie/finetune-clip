@@ -65,13 +65,16 @@ methods are supported.
 - [x] Add LoRA finetuning
 - [x] Test LoRA finetuning
 - [x] Add Layerwise finetuning
-- [ ] Test Layerwise finetuning
-- [ ] Add Hugginface support for LoRA
+- [x] Test Layerwise finetuning
+- [ ] Add Huggingface support for LoRA
 - [ ] Add Linear Probing Finetuning
 - [ ] Test Linear Probing Fintuning
 - [ ] Add Benchmarking for Colbert
       - Mostly done just need to also add fine-tuned model support
 - [ ] Add new Loss function for fine-grain training
+    - [x] Sparc
+    - [ ] Colbert
+- [ ] Test new Loss function for fine-grain training
     - [ ] Sparc
     - [ ] Colbert
 - [ ] Add more template scripts

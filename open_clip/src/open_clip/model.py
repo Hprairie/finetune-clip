@@ -257,6 +257,27 @@ class CLIP(nn.Module):
         # lock image tower as per LiT - https://arxiv.org/abs/2111.07991
         self.visual.lock(unlocked_groups=unlocked_groups, freeze_bn_stats=freeze_bn_stats)
 
+    def lock_text_tower(self, unlocked_groups=0, freeze_layer_norm=False):
+        for n, p in self.transformer.named_parameters():
+            p.requires_grad = (not freeze_layer_norm) if "LayerNorm" in n.split(".") else False
+        return
+
+        # In the transformer 
+        for block in range(
+                len(self.transformer.resblocks) - unlocked_groups, 
+                len(self.transformer.resblocks)
+            ):
+            for n, p in self.transformer.resblocks[block].named_parameters():
+                p.requires_grad = (not freeze_layer_norm) if "LayerNorm" in n.split(".") else True
+
+        # Unfreeze the final projection also if it exists
+        if unlocked_groups and self.text_projection is not None:
+            if isinstance(self.text_projection, nn.Parameter):
+                self.text_projection.requires_grad = True
+            else: # <- Linear head
+                for n, p in self.text_projection.named_parameters():
+                    p.requires_grad = (not freeze_layer_norm) if "LayerNorm" in n.split(".") else True
+
     @torch.jit.ignore
     def set_grad_checkpointing(self, enable=True):
         self.visual.set_grad_checkpointing(enable)
@@ -308,9 +329,15 @@ class CLIP(nn.Module):
             self,
             image: Optional[torch.Tensor] = None,
             text: Optional[torch.Tensor] = None,
+            return_embeddings: Optional[bool] = False, 
+            normalize: Optional[bool] = True
     ):
-        image_features = self.encode_image(image, normalize=True) if image is not None else None
-        text_features = self.encode_text(text, normalize=True) if text is not None else None
+        if return_embeddings:
+            image_features, image_embeddings = self.encode_image(image, normalize=normalize, return_tokens=True) if image is not None else None
+            text_features, text_embeddings = self.encode_text(text, normalize=normalize, return_tokens=True) if text is not None else None
+        else:
+            image_features = self.encode_image(image, normalize=normalize) if image is not None else None
+            text_features = self.encode_text(text, normalize=normalize) if text is not None else None
 
         if self.output_dict:
             out_dict = {
@@ -318,12 +345,19 @@ class CLIP(nn.Module):
                 "text_features": text_features,
                 "logit_scale": self.logit_scale.exp()
             }
+            if return_embeddings:
+                out_dict['image_embeddings'] = image_embeddings 
+                out_dict['text_embeddings'] = text_embeddings
             if self.logit_bias is not None:
                 out_dict['logit_bias'] = self.logit_bias
             return out_dict
 
         if self.logit_bias is not None:
+            if return_embeddings:
+                return image_features, text_features, image_embeddings, text_embeddings, self.logit_scale.exp(), self.logit_bias
             return image_features, text_features, self.logit_scale.exp(), self.logit_bias
+        if return_embeddings:
+            return image_features, text_features, image_embeddings, text_embeddings, self.logit_scale.exp()
         return image_features, text_features, self.logit_scale.exp()
 
 

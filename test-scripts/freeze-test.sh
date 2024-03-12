@@ -6,6 +6,7 @@ export MASTER_ADDR=$master_addr
 torchrun --nproc_per_node 1 -m finetune.main \
     --dataset-type "csv" \
     --train-data "$DATASETS/coco/annotations/captions_train2017.csv" \
+    --name 'test-freeze' \
     --warmup 1000 \
     --batch-size 128 \
     --lr 1e-5 \
@@ -14,7 +15,4 @@ torchrun --nproc_per_node 1 -m finetune.main \
     --workers 2 \
     --model "ViT-B-32" \
     --pretrained "openai" \
-    --lora "1:1"
-
-#    --report-to "wandb" \
-#    --log-every-n-steps 100
+    --freeze-layers "all:1"
