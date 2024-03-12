@@ -429,7 +429,7 @@ def create_model_and_transforms(
 
     # Load weights of module from pretrained
     if finetune_path is not None:
-        model.load_state_dict(torch.load(finetune_path))
+        model.load_state_dict(torch.load(finetune_path)["state_dict"])
 
     return model, preprocess_train, preprocess_val
 
