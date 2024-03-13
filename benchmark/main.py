@@ -28,7 +28,7 @@ def main(args):
 
     # Encode Dataset
     print("Encoding Dataset...")
-    image_encodings, text_encodings, text_to_image_map, image_to_text_map, patch_to_image_map, text_to_encoding_map = encode_dataset(model, dataset, batch_size=args.batchsize)
+    image_encodings, text_encodings, text_to_image_map, image_to_text_map, patch_to_image_map, text_to_encoding_map = encode_dataset(model, dataset, batch_size=args.batchsize, reg_retrieval=args.reg_retrieval)
 
     # Run Retrieval Benchmark
     print("Running Benchmark...")
@@ -40,12 +40,13 @@ def main(args):
             patch_to_image_map,
             text_to_encoding_map,
             args.k,
-            args.batchsize
+            args.batchsize,
+            args.reg_retrieval
     )
 
     # Save results
     print(results)
-    with open(os.path.join(save_path, 'colbert-retrieval.txt'), 'xa') as file:
+    with open(os.path.join(save_path, 'colbert-retrieval.txt'), 'w') as file:
         for k, val in zip(args.k, results):
             file.write(f'Retrieval @ {k}: {val}')
 

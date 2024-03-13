@@ -38,7 +38,7 @@ def parse_args(args):
             '--finetune-path',
             default=None,
             type=str,
-            help='Path to alterd architecture file'
+            help='Path to altered architecture file'
     )
     parser.add_argument(
             '--dataset',
@@ -56,6 +56,12 @@ def parse_args(args):
             type=int,
             default=32,
             help='Batch Size to use when encoding'
+    )
+    parser.add_argument(
+            '--reg_retrieval',
+            default=False,
+            action='store_true',
+            help='Run regular retrieval instead of finegrained'
     )
     args = parser.parse_args(args)
 

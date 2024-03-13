@@ -566,6 +566,7 @@ class VisionTransformer(nn.Module):
 
         if self.proj is not None:
             pooled = pooled @ self.proj
+            tokens = tokens @ self.proj
 
         if self.output_tokens:
             return pooled, tokens

@@ -15,7 +15,8 @@ from tqdm import tqdm
 def encode_dataset(
         clip: Union[CLIP, CustomTextCLIP],
         dataset: dutils.Dataset,
-        batch_size: int = 16
+        batch_size: int = 16,
+        reg_retrieval: bool = False
     ):
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     clip.to(device)
@@ -25,7 +26,6 @@ def encode_dataset(
 
     # text_to_image_map[i] gives the corresponding image index for the ith text
     text_to_image_map = []
-
 
     image_encodings = []
     text_encodings = []
@@ -38,12 +38,8 @@ def encode_dataset(
     text_to_encoding_map = {}
 
     dataloader = dutils.DataLoader(dataset, batch_size=batch_size, shuffle=False)
-    count = 0
     
     for images, text in tqdm(dataloader):
-        if count > 2:
-            break
-        count += 1
         images = images.to(device)
         text = text.to(device)
         
@@ -51,11 +47,13 @@ def encode_dataset(
         batch_size, captions_per_image, _ = text.shape
         text = rearrange(text, 'b s e -> (b s) e')
 
-        _, image_embeddings = clip.encode_image(images, return_tokens=True)
-        _, text_embeddings = clip.encode_text(text, return_tokens=True)
+        return_tokens = False if reg_retrieval else True
+        image_embeddings = clip.encode_image(images, return_tokens=return_tokens)
+        text_embeddings = clip.encode_text(text, return_tokens=return_tokens)
         
-        for i, encoding in enumerate(text_embeddings):
-            text_to_encoding_map[text[i]] = encoding
+        if not reg_retrieval:
+            for i, encoding in enumerate(text_embeddings):
+                text_to_encoding_map[text[i]] = encoding
 
         image_encodings.append(image_embeddings)
         text_encodings.append(text_embeddings)
@@ -70,8 +68,9 @@ def encode_dataset(
             # Each of the next captions_per_image text captions correspond to the same image
             text_to_image_map += [image_index] * captions_per_image
 
-            patches_per_image = image_embeddings.shape[1]
-            patch_to_image_map += [image_index] * patches_per_image
+            if not reg_retrieval:
+                patches_per_image = image_embeddings.shape[1]
+                patch_to_image_map += [image_index] * patches_per_image
             
             image_index += 1
 
@@ -80,7 +79,9 @@ def encode_dataset(
     
     text_to_image_map = torch.LongTensor(text_to_image_map).to(device)
     image_to_text_map = torch.LongTensor(image_to_text_map).to(device)
-    patch_to_image_map = torch.LongTensor(patch_to_image_map).to(device)
+    
+    if not reg_retrieval:
+        patch_to_image_map = torch.LongTensor(patch_to_image_map).to(device)
 
     # Normalize encodings
     image_encodings = image_encodings / image_encodings.norm(dim=-1, keepdim=True)
