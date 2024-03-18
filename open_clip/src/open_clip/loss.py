@@ -206,6 +206,10 @@ class SparcLoss(nn.Module):
         self.prev_num_logits = 0
         self.labels = {}
 
+        # Set Parameters
+        self.global_lambda = global_lambda
+        self.local_lambda = local_lambda
+
     def get_ground_truth(self, device, num_logits) -> torch.Tensor:
         # calculated ground-truth and cache if enabled
         if self.prev_num_logits != num_logits or device not in self.labels:
@@ -268,24 +272,24 @@ class SparcLoss(nn.Module):
         similarity = torch.einsum('btd,bpd->btp', text_embeddings, image_embeddings)
 
         # min-max normalization
-        similarity = (similarity - torch.min(similarity, dim=-1)) /         \
-                     (torch.max(similarity, dim=-1) - min(similarity, dim=-1))
+        similarity = (similarity - torch.amin(similarity, dim=-1, keepdim=True)) /         \
+                     (torch.amax(similarity, dim=-1, keepdim=True) - torch.amin(similarity, dim=-1, keepdim=True))
 
         # thresholding
-        similarity = torch.where(similarity < self.similarity_threshold, 0.0, similarity)
+        similarity = torch.where(similarity < 1 / similarity.shape[-1], 0.0, similarity)
 
         # alignment-weighting
-        image_align_weights = similarity / torch.sum(similarity, dim=-1)
+        image_align_weights = similarity / torch.sum(similarity, dim=-1, keepdim=True)
         text_grouped_image_patch_embed = torch.einsum('btp,bpd->btd', image_align_weights, image_embeddings)
 
         # Normalize Embeddings 
-        local_image_tokens = text_grouped_image_patch_embed / text_grouped_image_patch_embed.norm(dim=-1)
-        local_text_tokens = text_embeddings / text_embeddings.norm(dim=-1)
+        local_image_tokens = text_grouped_image_patch_embed / text_grouped_image_patch_embed.norm(dim=-1, keepdim=True)
+        local_text_tokens = text_embeddings / text_embeddings.norm(dim=-1, keepdim=True)
 
         # Take pairwise contrastive loss
         # IDK how to do this with pytorch CrossEntropyLoss as it is nested cross-entropy
         # This can be fixed we are doing to many extras ops
-        cross_product = einsum('btd,bpd->btp', local_text_tokens, local_image_tokens) * logit_scale
+        cross_product = torch.einsum('btd,bpd->btp', local_text_tokens, local_image_tokens) * logit_scale
         logits_image_token = F.softmax(cross_product, dim=2) # Take column-wise softmax
         logits_text_token = F.softmax(cross_product, dim=1) # Take row-wise softmax
 

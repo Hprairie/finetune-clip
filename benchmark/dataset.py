@@ -48,8 +48,8 @@ def encode_dataset(
         text = rearrange(text, 'b s e -> (b s) e')
 
         return_tokens = False if reg_retrieval else True
-        image_embeddings = clip.encode_image(images, return_tokens=return_tokens)
-        text_embeddings = clip.encode_text(text, return_tokens=return_tokens)
+        _, image_embeddings = clip.encode_image(images, return_tokens=return_tokens)
+        _, text_embeddings = clip.encode_text(text, return_tokens=return_tokens)
         
         if not reg_retrieval:
             for i, encoding in enumerate(text_embeddings):

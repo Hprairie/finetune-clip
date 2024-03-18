@@ -451,13 +451,13 @@ def parse_args(args):
         help='Use Sparc loss.'
     )
     parser.add_argument(
-        "--sparce-global-lambda",
+        "--sparc-global-lambda",
         default=1.0,
         type=float,
         help="Set the global weights for sparc loss"
     )
     parser.add_argument(
-        "--sparce-local-lambda",
+        "--sparc-local-lambda",
         default=1.0,
         type=float,
         help="Set the local weights for sparc loss"
