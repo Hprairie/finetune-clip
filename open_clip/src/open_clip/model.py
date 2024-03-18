@@ -289,7 +289,7 @@ class CLIP(nn.Module):
             self.visual.output_tokens = True
             features, tokens = self.visual(image)
             self.visual.output_tokens = original
-            return tokens
+            return F.normalize(features, dim=-1), tokens
 
         features = self.visual(image)
         return F.normalize(features, dim=-1) if normalize else features
@@ -312,7 +312,7 @@ class CLIP(nn.Module):
                 x = x @ self.text_projection
 
         if return_tokens:
-            return tokens
+            return F.normalize(x, dim=-1) if normalize else x, tokens
 
         return F.normalize(x, dim=-1) if normalize else x
 

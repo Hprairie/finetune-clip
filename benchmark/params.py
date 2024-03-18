@@ -66,6 +66,7 @@ def parse_args(args):
     args = parser.parse_args(args)
 
     # Get hyper-parameter information from log file
+    pretrained_info = argparse.ArgumentParser()
     if args.pretrained is not None and args.altered:
         with open(os.path.join(args.pretrained, 'params.txt'), 'r') as file:
             for line in file:
