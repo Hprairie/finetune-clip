@@ -105,7 +105,7 @@ def finegrained_recall_at_k(
     # text-to-image recall
     print("Text-to-image recall...")
     text_to_image_recall = []
-    n_patches = 10
+    n_patches = 50
 
     for k in k_vals:
         correct_recall_count = 0
@@ -155,7 +155,7 @@ def finegrained_recall_at_k(
                 cos_sim = scaled_text_embeddings @ scaled_image_embeddings.T
                 
                 # Max pool per embedding
-                score = sum(torch.argmax(cos_sim, dim=0))
+                score = torch.max(cos_sim, dim=0).values.sum()
                 top_k_images[match] = score
 
             # Get the top k images by score
