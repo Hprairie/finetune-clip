@@ -53,6 +53,21 @@ torchrun --nproc_per_node 1 -m finetune.main \
 
 Additional Scripts can be found in `scripts/`, I will try to make slurm and sh pairs for every script so that it can easily be run on tacc.
 
+## Running Benchmarking Scripts
+
+```bash
+python benchmark/main.py \
+    --dataset "/path/to/dataset" \
+    --dataset-ann "/path/to/annotation.csv" \
+    --pretrained "path/to/checkpoint" \ # This can also be the name of an online source
+    --finetune-path "logs/run-name" \ # Path to Log directory of a finetune run
+    --name "Name_of_Benchmark_Run" \
+    --k 1 5 \
+    --batchsize 256
+```
+
+Running Benchmarking on local logs will infer how to construct the model. Otherwise, just specify model specifics when calling the benchmarking script.
+
 ## Adding New Finetuning Methods
 Go to `finetune.configure_finetune` in order to add a new method to finetune clip models. Currently the following
 methods are supported.
