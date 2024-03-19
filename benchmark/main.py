@@ -55,7 +55,7 @@ def main(args):
     with open(os.path.join(save_path, 'params.txt'), 'w') as file:
         for name in sorted(vars(args)):
             val = getattr(args, name)
-            file.write(f"{name}: {val}")
+            file.write(f"{name}: {val}\n")
 
     # Get Dataset and clean
     print("Fetching Dataset...")
