@@ -69,12 +69,12 @@ methods are supported.
 - [ ] Add Huggingface support for LoRA
 - [ ] Add Linear Probing Finetuning
 - [ ] Test Linear Probing Fintuning
-- [ ] Add Benchmarking for Colbert
+- [x] Add Benchmarking for Colbert
       - Mostly done just need to also add fine-tuned model support
 - [ ] Add new Loss function for fine-grain training
     - [x] Sparc
     - [ ] Colbert
 - [ ] Test new Loss function for fine-grain training
-    - [ ] Sparc
+    - [x] Sparc
     - [ ] Colbert
-- [ ] Add more template scripts
+- [x] Add more template scripts
