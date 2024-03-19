@@ -1,5 +1,6 @@
 import argparse
 import os
+from finetune.params import parse_args as training_parse_args
 
 
 # Get args
@@ -29,16 +30,10 @@ def parse_args(args):
             help='Either a path to a local point or name from web'
     )
     parser.add_argument(
-            '--altered',
-            default=False,
-            action='store_true',
-            help='If altered architecture'
-    )
-    parser.add_argument(
             '--finetune-path',
             default=None,
             type=str,
-            help='Path to altered architecture file'
+            help='Path to altered architecture log'
     )
     parser.add_argument(
             '--dataset',
@@ -63,13 +58,31 @@ def parse_args(args):
             action='store_true',
             help='Run regular retrieval instead of finegrained'
     )
-    args = parser.parse_args(args)
+    local_args = parser.parse_args(args)
+    print(args)
 
     # Get hyper-parameter information from log file
-    pretrained_info = argparse.ArgumentParser()
-    if args.pretrained is not None and args.altered:
-        with open(os.path.join(args.pretrained, 'params.txt'), 'r') as file:
+    finetune_params = []
+
+    unknown_vars = ['checkpoint_path', 'device', 'distill', 'distributed', 'local_rank', 'log_level', 'log_path', 'rank', 'tensorboard', 'tensorboard_path', 'wandb', 'world_size']
+
+    if local_args.pretrained is not None and local_args.finetune_path is not None:
+        with open(os.path.join(local_args.finetune_path, 'params.txt'), 'r') as file:
             for line in file:
-                pass
+                name, val = line.strip().split(':', 1)
+                if name in unknown_vars:
+                    continue
+                name = '--' + name.replace('_', '-')
+                val = val.strip()
+                if val in ['{}', 'None', '', 'False']:
+                    continue
+                if val == 'True':
+                    finetune_params.append(name)
+                else:
+                    finetune_params += [name, val]
+    print(finetune_params)
+
+    finetune_params = training_parse_args(finetune_params)
     
-    return args
+    local_args.finetune_args = finetune_params
+    return local_args
