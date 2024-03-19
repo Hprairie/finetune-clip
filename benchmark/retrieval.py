@@ -105,9 +105,9 @@ def finegrained_recall_at_k(
     # text-to-image recall
     print("Text-to-image recall...")
     text_to_image_recall = []
-    n_patches = 50
 
     for k in k_vals:
+        n_patches = k
         correct_recall_count = 0
         
         for caption_idx in range(num_text):
@@ -147,10 +147,9 @@ def finegrained_recall_at_k(
                 patches = image_encodings[match]
                 
                 # Calculate Cosine similarity
-                scaled_text_embeddings = caption_text_encodings / torch.norm(caption_text_encodings, p=2, dim=1, keepdim=True)
+                scaled_text_embeddings = caption_text_encodings / torch.norm(caption_text_encodings, p=2, dim=-1, keepdim=True)
                 
-                scaled_image_embeddings = patches / torch.norm(patches, p=2, keepdim=True)
-                scaled_image_embeddings = scaled_image_embeddings.unsqueeze(0)
+                scaled_image_embeddings = patches / torch.norm(patches, p=2, dim=-1, keepdim=True)
                 
                 cos_sim = scaled_text_embeddings @ scaled_image_embeddings.T
                 
