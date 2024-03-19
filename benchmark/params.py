@@ -53,7 +53,7 @@ def parse_args(args):
             help='Batch Size to use when encoding'
     )
     parser.add_argument(
-            '--reg_retrieval',
+            '--reg-retrieval',
             default=False,
             action='store_true',
             help='Run regular retrieval instead of finegrained'
@@ -80,7 +80,6 @@ def parse_args(args):
                     finetune_params.append(name)
                 else:
                     finetune_params += [name, val]
-    print(finetune_params)
 
     finetune_params = training_parse_args(finetune_params)
     

@@ -5,6 +5,6 @@ finetune_args: Namespace(train_data='/work/09753/hprairie/ls6/.datasets/coco/ann
 finetune_path: logs/ViT-B-32-LoRA-Rank4-SPARC
 k: [1, 5]
 model: None
-name: LoRA-Rank4-SPARC-Finegrain
+name: LoRA-Rank4-SPARC-Coarse
 pretrained: logs/ViT-B-32-LoRA-Rank4-SPARC/checkpoints/epoch_1.pt
-reg_retrieval: False
+reg_retrieval: True

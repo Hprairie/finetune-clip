@@ -1,0 +1,2 @@
+Retrieval @ 1: 0.27888
+Retrieval @ 5: 0.53728

@@ -47,9 +47,12 @@ def encode_dataset(
         batch_size, captions_per_image, _ = text.shape
         text = rearrange(text, 'b s e -> (b s) e')
 
-        return_tokens = False if reg_retrieval else True
-        _, image_embeddings = clip.encode_image(images, return_tokens=return_tokens)
-        _, text_embeddings = clip.encode_text(text, return_tokens=return_tokens)
+        if reg_retrieval:
+            image_embeddings = clip.encode_image(images)
+            text_embeddings = clip.encode_text(text)
+        else:
+            _, image_embeddings = clip.encode_image(images, return_tokens=return_tokens)
+            _, text_embeddings = clip.encode_text(text, return_tokens=return_tokens)
         
         if not reg_retrieval:
             for i, encoding in enumerate(text_embeddings):
@@ -83,9 +86,9 @@ def encode_dataset(
     if not reg_retrieval:
         patch_to_image_map = torch.LongTensor(patch_to_image_map).to(device)
 
-    # Normalize encodings
-    image_encodings = image_encodings / image_encodings.norm(dim=-1, keepdim=True)
-    text_encodings = text_encodings / text_encodings.norm(dim=-1, keepdim=True)
+    # Normalize encodings (Why are we normalizing?)
+    #image_encodings = image_encodings / image_encodings.norm(dim=-1, keepdim=True)
+    #text_encodings = text_encodings / text_encodings.norm(dim=-1, keepdim=True)
 
     return image_encodings, text_encodings, text_to_image_map, image_to_text_map, patch_to_image_map, text_to_encoding_map
 

@@ -81,9 +81,9 @@ def main(args):
 
     # Save results
     print(results)
-    with open(os.path.join(save_path, 'colbert-retrieval.txt'), 'w') as file:
+    with open(os.path.join(save_path, 'retrieval-results.txt'), 'w') as file:
         for k, val in zip(args.k, results):
-            file.write(f'Retrieval @ {k}: {val}')
+            file.write(f'Retrieval @ {k}: {val}\n')
 
 if __name__ == '__main__':
     args = sys.argv[1:]
