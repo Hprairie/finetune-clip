@@ -5,6 +5,7 @@ from params import parse_args
 from open_clip import create_model_and_transforms, get_tokenizer
 from dataset import get_dataset, encode_dataset
 from retrieval import recall_at_k
+import logging
 
 
 def main(args):
