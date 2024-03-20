@@ -756,6 +756,7 @@ class TextTransformer(nn.Module):
                 pooled = self.text_projection(pooled)
             else:
                 pooled = pooled @ self.text_projection
+                tokens = tokens @ self.text_projection
 
         if self.output_tokens:
             return pooled, tokens

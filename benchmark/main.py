@@ -11,7 +11,7 @@ def main(args):
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
     # Get model and transforms
-    print("Creating Model...")
+    logging.info("Creating Model...")
 
 
     if args.finetune_path is not None:
@@ -45,7 +45,7 @@ def main(args):
         tokenizer = get_tokenizer(args.model)
 
     # Setup saving
-    print("Creating Savefile...")
+    logging.info("Creating Savefile...")
     save_path = os.path.join('benchmark-results',args.name)
     if os.path.isdir(save_path):
         raise FileExistsError("Benchmark directory already exist. Don't overwrite your data :(")
@@ -58,15 +58,15 @@ def main(args):
             file.write(f"{name}: {val}\n")
 
     # Get Dataset and clean
-    print("Fetching Dataset...")
+    logging.info("Fetching Dataset...")
     dataset = get_dataset(args, preprocess, tokenizer)
 
     # Encode Dataset
-    print("Encoding Dataset...")
+    logging.info("Encoding Dataset...")
     image_encodings, text_encodings, text_to_image_map, image_to_text_map, patch_to_image_map, text_to_encoding_map = encode_dataset(model, dataset, batch_size=args.batchsize, reg_retrieval=args.reg_retrieval)
 
     # Run Retrieval Benchmark
-    print("Running Benchmark...")
+    logging.info("Running Benchmark...")
     results = recall_at_k(
             image_encodings,
             text_encodings,
@@ -80,7 +80,7 @@ def main(args):
     )
 
     # Save results
-    print(results)
+    logging.info(results)
     with open(os.path.join(save_path, 'retrieval-results.txt'), 'w') as file:
         for k, val in zip(args.k, results):
             file.write(f'Retrieval @ {k}: {val}\n')

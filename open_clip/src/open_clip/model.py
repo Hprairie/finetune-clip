@@ -257,21 +257,21 @@ class CLIP(nn.Module):
         # lock image tower as per LiT - https://arxiv.org/abs/2111.07991
         self.visual.lock(unlocked_groups=unlocked_groups, freeze_bn_stats=freeze_bn_stats)
 
-    def lock_text_tower(self, unlocked_groups=0, freeze_layer_norm=False):
+    def lock_text_tower(self, unlocked_layers=0, freeze_layer_norm=False):
         for n, p in self.transformer.named_parameters():
             p.requires_grad = (not freeze_layer_norm) if "LayerNorm" in n.split(".") else False
         return
 
         # In the transformer 
         for block in range(
-                len(self.transformer.resblocks) - unlocked_groups, 
+                len(self.transformer.resblocks) - unlocked_layers, 
                 len(self.transformer.resblocks)
             ):
             for n, p in self.transformer.resblocks[block].named_parameters():
                 p.requires_grad = (not freeze_layer_norm) if "LayerNorm" in n.split(".") else True
 
         # Unfreeze the final projection also if it exists
-        if unlocked_groups and self.text_projection is not None:
+        if unlocked_layers and self.text_projection is not None:
             if isinstance(self.text_projection, nn.Parameter):
                 self.text_projection.requires_grad = True
             else: # <- Linear head
@@ -308,8 +308,10 @@ class CLIP(nn.Module):
         if self.text_projection is not None:
             if isinstance(self.text_projection, nn.Linear):
                 x = self.text_projection(x)
+                tokens = self.text_projection(x)
             else:
                 x = x @ self.text_projection
+                tokens = tokens @ self.text_projection
 
         if return_tokens:
             return F.normalize(x, dim=-1) if normalize else x, tokens

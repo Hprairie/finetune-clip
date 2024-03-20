@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
+import logging
 
 try:
     import torch.distributed.nn
@@ -179,6 +180,92 @@ class ClipLoss(nn.Module):
 
         return {"contrastive_loss": total_loss} if output_dict else total_loss
 
+class ColbertLoss(nn.Module):
+    def __init__(
+            self,
+            local_loss=False,
+            gather_with_grad=False,
+            cache_labels=False,
+            rank=0,
+            world_size=1,
+            use_horovod=False,
+            similarity_metric='cosine'
+    ):
+        super().__init__()
+        self.local_loss = local_loss
+        self.gather_with_grad = gather_with_grad
+        self.cache_labels = cache_labels
+        self.rank = rank
+        self.world_size = world_size
+        self.use_horovod = use_horovod
+        self.similarity_metric = similarity_metric
+
+        # cache state
+        self.prev_num_logits = 0
+        self.labels = {}
+        
+    def check_nan(self, tensor, name):
+        if torch.isnan(tensor).any():
+            logging.info(f"NaN detected in {name}")
+
+    def forward(self, image_features, text_features, image_embeddings, text_embeddings, logit_scale, output_dict=False):
+        similarity = torch.einsum('ctd,ipd->citp', text_embeddings, image_embeddings) # Change is here
+
+        # Apply MaxSim operator - maximum similarity across all documents for each query term, and vice versa
+        max_sim_q = similarity.amax(dim=3).sum(dim=-1)
+        max_sim_d = similarity.amax(dim=2).sum(dim=-1)
+        
+        exp_scores_q = torch.exp(max_sim_q)
+        row_sum_exp_scores_q = exp_scores_q.sum(dim=0, keepdim=True)
+        col_sum_exp_scores_q = exp_scores_q.sum(dim=1, keepdim=True)
+        
+        self.check_nan(exp_scores_q, "exp_scores_q")
+        self.check_nan(row_sum_exp_scores_q, "row_sum_exp_scores_q")
+        self.check_nan(col_sum_exp_scores_q, "col_sum_exp_scores_q")
+
+
+        exp_scores_d = torch.exp(max_sim_d)
+        row_sum_exp_scores_d = exp_scores_d.sum(dim=0, keepdim=True)
+        col_sum_exp_scores_d = exp_scores_d.sum(dim=1, keepdim=True)
+
+        self.check_nan(exp_scores_d, "exp_scores_d")
+        self.check_nan(row_sum_exp_scores_d, "row_sum_exp_scores_d")
+        self.check_nan(col_sum_exp_scores_d, "col_sum_exp_scores_d")
+        
+        row_norm_scores_q = torch.softmax(max_sim_q, dim=0)
+
+        # For column-wise softmax normalization of max_sim_q
+        col_norm_scores_q = torch.softmax(max_sim_q, dim=1)
+
+        # Similarly, for max_sim_d
+        row_norm_scores_d = torch.softmax(max_sim_d, dim=0)
+        col_norm_scores_d = torch.softmax(max_sim_d, dim=1)
+
+        # Compute normalized scores (softmax manually)
+        # row_norm_scores_q = exp_scores_q / (row_sum_exp_scores_q + 1e-8)
+        # col_norm_scores_q = exp_scores_q / (col_sum_exp_scores_q + 1e-8)
+        # row_norm_scores_d = exp_scores_d / (row_sum_exp_scores_d + 1e-8)
+        # col_norm_scores_d = exp_scores_d / (col_sum_exp_scores_d + 1e-8)
+
+        self.check_nan(row_norm_scores_q, "row_norm_scores_q")
+        self.check_nan(row_norm_scores_d, "row_norm_scores_d")
+        self.check_nan(col_norm_scores_q, "col_norm_scores_q")
+        self.check_nan(col_norm_scores_d, "col_norm_scores_d")
+
+        neg_log_prob_q = -torch.log(col_norm_scores_q.diag() + 1e-8) - torch.log(row_norm_scores_q.diag() + 1e-8)
+        neg_log_prob_d = -torch.log(col_norm_scores_d.diag() + 1e-8) - torch.log(row_norm_scores_d.diag() + 1e-8)
+
+        self.check_nan(neg_log_prob_q, "neg_log_prob_q")
+        self.check_nan(neg_log_prob_d, "neg_log_prob_d")
+
+        loss_q = neg_log_prob_q.mean()
+        loss_d = neg_log_prob_d.mean()
+
+        # Combine the losses for the final contrastive loss
+        contrastive_loss = (loss_q + loss_d) / 2
+
+        return {"contrastive_loss": contrastive_loss} if output_dict else contrastive_loss
+
 class SparcLoss(nn.Module):
     """# This requires that we have access to the tokens, this has not been implemented on
     CustomTextTowerClip, so it will throw an error."""
@@ -256,18 +343,6 @@ class SparcLoss(nn.Module):
         ) / 2
 
         # ---------- Local Loss ------------
-
-        # This is unneeded for SPARC but very important for Colbert, use it later 
-        """
-        if self.local_loss:
-            logits_per_image, logits_per_text = image_embeddings, text_embeddings
-        else:
-            all_image_embeddings, all_text_embeddings = gather_embeddings(
-                    image_embeddings, text_embeddings,
-                    self.local_loss, self.gather_with_grad, self.rank, self.world_size, self.use_horovod)
-            logits_per_image, logits_per_text = all_image_embeddings, all_text_embeddings
-        """
-
         # similarity calculation
         similarity = torch.einsum('btd,bpd->btp', text_embeddings, image_embeddings)
 

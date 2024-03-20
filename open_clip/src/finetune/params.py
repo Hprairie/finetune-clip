@@ -442,6 +442,12 @@ def parse_args(args):
         action="store_true",
         help='Use SigLip (sigmoid) loss.'
     )
+    parser.add_argument(
+        "--colbert",
+        default=False,
+        action="store_true",
+        help='Use ColBERT loss.'
+    )
 
     # ======================================================================= #
     parser.add_argument(
