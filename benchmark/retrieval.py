@@ -149,11 +149,11 @@ def finegrained_recall_at_k(
                 # Calculate Cosine similarity
                 scaled_text_embeddings = caption_text_encodings / torch.norm(caption_text_encodings, p=2, dim=-1, keepdim=True)
                 scaled_image_embeddings = patches / torch.norm(patches, p=2, dim=-1, keepdim=True)
-                
+    
                 cos_sim = scaled_text_embeddings @ scaled_image_embeddings.T
-                
+
                 # Max pool per embedding
-                score = torch.max(cos_sim, dim=0).values.sum()
+                score = torch.max(cos_sim, dim=1).values.sum()
                 top_k_images[match] = score
 
             # Get the top k images by score
