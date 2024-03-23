@@ -3,6 +3,7 @@ import torch
 from torchvision.datasets import CocoCaptions
 import torch.utils.data as dutils
 from typing import List
+import logging
 import collections
 
 def recall_at_k(
@@ -138,20 +139,20 @@ def finegrained_recall_at_k(
                     parent_image = patch_to_image_map[label].item()
 
                     # Add the parent_image to the set of working images
-                    image_matches.add(parent_image) 
+                    image_matches.add(parent_image)
                     
             # For all found images calculate the similarity scores
             top_k_images = collections.defaultdict(float)
             for match in image_matches: # <- Parallelize this and increase batch_size
                 # Get patch embeddings
-                patches = image_encodings[match]
+                patches = image_encodings[match * 49 : (match + 1) * 49]
                 
                 # Calculate Cosine similarity
                 scaled_text_embeddings = caption_text_encodings / torch.norm(caption_text_encodings, p=2, dim=-1, keepdim=True)
                 scaled_image_embeddings = patches / torch.norm(patches, p=2, dim=-1, keepdim=True)
     
                 cos_sim = scaled_text_embeddings @ scaled_image_embeddings.T
-
+                
                 # Max pool per embedding
                 score = torch.max(cos_sim, dim=1).values.sum()
                 top_k_images[match] = score
