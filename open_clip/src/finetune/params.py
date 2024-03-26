@@ -442,14 +442,34 @@ def parse_args(args):
         action="store_true",
         help='Use SigLip (sigmoid) loss.'
     )
+
+    # ======================================================================= #
     parser.add_argument(
         "--colbert",
         default=False,
         action="store_true",
         help='Use ColBERT loss.'
     )
-
-    # ======================================================================= #
+    parser.add_argument(
+        "--colbert-dropout",
+        default=0.,
+        type=float,
+        help="The probability of dropping tokens with maxsim"
+    )
+    parser.add_argument(
+        "--colbert-local-contrastive",
+        default="all",
+        type=str,
+        help="How the loss is constructed at the local level",
+        choices=["all", "patch-wise", "token-wise"],
+    )
+    parser.add_argument(
+        "--colbert-global-contrastive",
+        default="all",
+        type=str,
+        help="How the loss is constructed at the global level",
+        choices=["all", "image-wise", "text-wise"],
+    )
     parser.add_argument(
         "--sparc",
         default=False,

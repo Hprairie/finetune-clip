@@ -189,7 +189,10 @@ class ColbertLoss(nn.Module):
             rank=0,
             world_size=1,
             use_horovod=False,
-            similarity_metric='cosine'
+            similarity_metric='cosine',
+            dropout=0.,
+            global_contrastive='all',
+            local_contrastive='all'
     ):
         super().__init__()
         self.local_loss = local_loss
@@ -203,6 +206,14 @@ class ColbertLoss(nn.Module):
         # cache state
         self.prev_num_logits = 0
         self.labels = {}
+
+        # loss information
+        if dropout != 0.:
+            self.dropout = nn.Dropout(p=dropout)
+        else:
+            self.dropout = None
+        self.global_contrastive=global_contrastive
+        self.local_constrastive=local_contrastive
         
     def check_nan(self, tensor, name):
         if torch.isnan(tensor).any():
@@ -211,59 +222,41 @@ class ColbertLoss(nn.Module):
     def forward(self, image_features, text_features, image_embeddings, text_embeddings, logit_scale, output_dict=False):
         similarity = torch.einsum('ctd,ipd->citp', text_embeddings, image_embeddings) # Change is here
 
+        if self.dropout is not None:
+            similarity = self.dropout(similarity)
+
         # Apply MaxSim operator - maximum similarity across all documents for each query term, and vice versa
-        max_sim_q = similarity.amax(dim=3).sum(dim=-1)
-        max_sim_d = similarity.amax(dim=2).sum(dim=-1)
-        
-        exp_scores_q = torch.exp(max_sim_q)
-        row_sum_exp_scores_q = exp_scores_q.sum(dim=0, keepdim=True)
-        col_sum_exp_scores_q = exp_scores_q.sum(dim=1, keepdim=True)
-        
-        self.check_nan(exp_scores_q, "exp_scores_q")
-        self.check_nan(row_sum_exp_scores_q, "row_sum_exp_scores_q")
-        self.check_nan(col_sum_exp_scores_q, "col_sum_exp_scores_q")
+        scores = []
+        if self.local_contrastive == "patch-wise" or self.local_constrastive == "all":
+            # Take the maxsim for every patch
+            max_sim_p = similarity.amax(dim=2).sum(dim=-1)
+            scores.append(max_sim_p)
 
+        if self.local_constrastive == "token-wise" or self.local_constrastive == "all":
+            # Take the maxsim for every token
+            max_sim_t = similarity.amax(dim=3).sum(dim=-1)
+            scores.append(max_sim_t)
 
-        exp_scores_d = torch.exp(max_sim_d)
-        row_sum_exp_scores_d = exp_scores_d.sum(dim=0, keepdim=True)
-        col_sum_exp_scores_d = exp_scores_d.sum(dim=1, keepdim=True)
+        # Apply Constrastive Loss
+        loss_streams = []
+        if self.global_constrastive == "image-wise" or self.global_contrastive == "all":
+            for score in scores:
+                image_wise_softmax = torch.softmax(score, dim=0)
+                self.check_nan(image_wise_softmax, "image_wise_softmax")
+                image_wise_loss = -torch.log(image_wise_softmax.diag()).mean()
+                self.check_nan(image_wise_loss, "image_wise_loss")
+                loss_streams.append(image_wise_loss)
 
-        self.check_nan(exp_scores_d, "exp_scores_d")
-        self.check_nan(row_sum_exp_scores_d, "row_sum_exp_scores_d")
-        self.check_nan(col_sum_exp_scores_d, "col_sum_exp_scores_d")
-        
-        row_norm_scores_q = torch.softmax(max_sim_q, dim=0)
-
-        # For column-wise softmax normalization of max_sim_q
-        col_norm_scores_q = torch.softmax(max_sim_q, dim=1)
-
-        # Similarly, for max_sim_d
-        row_norm_scores_d = torch.softmax(max_sim_d, dim=0)
-        col_norm_scores_d = torch.softmax(max_sim_d, dim=1)
-
-        # Compute normalized scores (softmax manually)
-        # row_norm_scores_q = exp_scores_q / (row_sum_exp_scores_q + 1e-8)
-        # col_norm_scores_q = exp_scores_q / (col_sum_exp_scores_q + 1e-8)
-        # row_norm_scores_d = exp_scores_d / (row_sum_exp_scores_d + 1e-8)
-        # col_norm_scores_d = exp_scores_d / (col_sum_exp_scores_d + 1e-8)
-
-        self.check_nan(row_norm_scores_q, "row_norm_scores_q")
-        self.check_nan(row_norm_scores_d, "row_norm_scores_d")
-        self.check_nan(col_norm_scores_q, "col_norm_scores_q")
-        self.check_nan(col_norm_scores_d, "col_norm_scores_d")
-
-        neg_log_prob_q = -torch.log(col_norm_scores_q.diag() + 1e-8) - torch.log(row_norm_scores_q.diag() + 1e-8)
-        neg_log_prob_d = -torch.log(col_norm_scores_d.diag() + 1e-8) - torch.log(row_norm_scores_d.diag() + 1e-8)
-
-        self.check_nan(neg_log_prob_q, "neg_log_prob_q")
-        self.check_nan(neg_log_prob_d, "neg_log_prob_d")
-
-        loss_q = neg_log_prob_q.mean()
-        loss_d = neg_log_prob_d.mean()
+        if self.global_contrastive == "text-wise" or self.global_contrastive == "all":
+            for score in scores:
+                text_wise_softmax = torch.softmax(score, dim=1)
+                self.check_nan(text_wise_softmax, "text_wise_softmax")
+                text_wise_loss = -torch.log(text_wise_softmax.diag()).mean()
+                self.check_nan(text_wise_loss, "text_wise_loss")
+                loss_streams.append(text_wise_loss)
 
         # Combine the losses for the final contrastive loss
-        contrastive_loss = (loss_q + loss_d) / 2
-
+        contrastive_loss = torch.concat(loss_streams).mean()
         return {"contrastive_loss": contrastive_loss} if output_dict else contrastive_loss
 
 class SparcLoss(nn.Module):

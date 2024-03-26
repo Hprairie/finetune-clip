@@ -37,8 +37,7 @@ srun --cpu_bind=v --accel-bind=gn python -m finetune.main \
     --epochs 1 \
     --workers 2 \
     --model "ViT-B-32" \
-    --name "ViT-B-32-LoRA-Rank4-ColBERT" \
-    --pretrained "openai" \
+    --name "ViT-B-32-LoRA-Epoch1-Rank4-ColBERT-Random" \
     --lora "4:1" \
     --colbert \
     --report-to "wandb" \
@@ -46,4 +45,5 @@ srun --cpu_bind=v --accel-bind=gn python -m finetune.main \
     --log-every-n-steps 100
 
 # ---------------------------------------------------
+#    --pretrained "openai" \
 

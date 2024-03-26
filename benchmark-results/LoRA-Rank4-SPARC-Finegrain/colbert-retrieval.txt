@@ -1,2 +1,0 @@
-Retrieval @ 1: 8e-05
-Retrieval @ 5: 0.00064

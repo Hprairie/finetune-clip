@@ -40,8 +40,6 @@ def main(args):
         model, _, preprocess = create_model_and_transforms(
                 model_name=args.model,
                 pretrained=args.pretrained,
-                finetune_args=args.finetune_args,
-                finetune_path=args.finetune_path
         )
         tokenizer = get_tokenizer(args.model)
 

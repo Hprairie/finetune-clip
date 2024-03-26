@@ -51,8 +51,8 @@ def encode_dataset(
             image_embeddings = clip.encode_image(images)
             text_embeddings = clip.encode_text(text)
         else:
-            _, image_embeddings = clip.encode_image(images, return_tokens=return_tokens)
-            _, text_embeddings = clip.encode_text(text, return_tokens=return_tokens)
+            _, image_embeddings = clip.encode_image(images, return_tokens=True)
+            _, text_embeddings = clip.encode_text(text, return_tokens=True)
         
         # TODO: get rid of text_to_encoding_map
         # if not reg_retrieval:

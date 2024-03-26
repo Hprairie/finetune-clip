@@ -1,0 +1,4 @@
+Retrieval @ 1: 0.03552
+Retrieval @ 5: 0.11048
+Retrieval @ 10: 0.166
+Retrieval @ 50: 0.34224

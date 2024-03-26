@@ -4,13 +4,13 @@
 # for TACC Lonestar6  nodes
 #----------------------------------------------------
 
-#SBATCH -J FT-CLIP                        # Job name
+#SBATCH -J BM-CLIP                        # Job name
 #SBATCH -o slurmlogs/BM-CLIP.o%j          # Name of stdout output file (%j corresponds to the job id)
 #SBATCH -e slurmlogs/BM-CLIP.e%j          # Name of stderr error file (%j corresponds to the job id)
 #SBATCH -p gpu-a100-small                 # Queue (partition) name
 #SBATCH -N 1                              # Total # of nodes (must be 1 for serial)
 #SBATCH -n 1                              # Total # of mpi tasks (should be 1 for serial)
-#SBATCH -t 12:00:00                       # Run time (hh:mm:ss)
+#SBATCH -t 06:00:00                       # Run time (hh:mm:ss)
 #SBATCH --mail-user=haydenprairie@utexas.edu
 #SBATCH --mail-type=all                   # Send email at begin and end of job (can assign begin or end as well)
 #SBATCH -A MLL                            # Allocation name
@@ -25,10 +25,10 @@ cd $WORK/projects/retrieval-clip
 python benchmark/main.py \
     --dataset "$DATASETS/coco/images/val2017" \
     --dataset-ann "$DATASETS/coco/annotations/captions_val2017.json" \
-    --pretrained "logs/ViT-B-32-LoRA-Rank4-SPARC/checkpoints/epoch_1.pt" \
-    --finetune-path "logs/ViT-B-32-LoRA-Rank4-SPARC" \
-    --name "LoRA-Rank4-SPARC-Finegrain" \
-    --k 1 5 \
+    --pretrained "logs/ViT-B-32-LoRA-Epoch1-Rank4-ColBERT-Random/checkpoints/epoch_1.pt" \
+    --finetune-path "logs/ViT-B-32-LoRA-Epoch1-Rank4-ColBERT-Random" \
+    --name "LoRA-Rank4-ColBERT-Random-Finegrain-Epoch1" \
+    --k 1 5 10 50 \
     --batchsize 256
 
 

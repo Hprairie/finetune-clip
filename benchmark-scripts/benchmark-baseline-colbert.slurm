@@ -25,13 +25,10 @@ cd $WORK/projects/retrieval-clip
 python benchmark/main.py \
     --dataset "$DATASETS/coco/images/val2017" \
     --dataset-ann "$DATASETS/coco/annotations/captions_val2017.json" \
-    --pretrained "logs/ViT-B-32-LoRA-Rank4-SPARC/checkpoints/epoch_1.pt" \
-    --finetune-path "logs/ViT-B-32-LoRA-Rank4-SPARC" \
-    --name "LoRA-Rank4-SPARC-Coarse" \
-    --k 1 5 10 50\
-    --batchsize 256 \
-    --reg-retrieval
-
+    --pretrained "openai" \
+    --model "ViT-B-32" \
+    --name "Baseline-ViT-B-32-Colbert" \
+    --k 1 5 \
+    --batchsize 256
 
 # ---------------------------------------------------
-
