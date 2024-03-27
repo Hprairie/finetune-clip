@@ -25,6 +25,8 @@ Scripts: Scripts to finetune CLIP
 
 Benchmark-scripts: Scripts to run benchmarks on different CLIP models
 
+Benchmark-results: Restults from benchmarking open_clip models
+
 Open-Clip: src
 
 ## Running Finetuning Scripts
@@ -74,7 +76,7 @@ methods are supported.
 
 - LoRA (Done and tested)
 - Linear Probing (Not Implemented yet)
-- Layer Freezing (Done but untested)
+- Layer Freezing (Done but tested)
 
 ## TODO List
 - [x] Add LoRA finetuning
@@ -86,10 +88,10 @@ methods are supported.
 - [ ] Test Linear Probing Fintuning
 - [x] Add Benchmarking for Colbert
       - Mostly done just need to also add fine-tuned model support
-- [ ] Add new Loss function for fine-grain training
+- [x] Add new Loss function for fine-grain training
     - [x] Sparc
-    - [ ] Colbert
-- [ ] Test new Loss function for fine-grain training
+    - [x] Colbert
+- [x] Test new Loss function for fine-grain training
     - [x] Sparc
-    - [ ] Colbert
+    - [x] Colbert
 - [x] Add more template scripts
