@@ -215,10 +215,6 @@ class ColbertLoss(nn.Module):
         self.global_contrastive=global_contrastive
         self.local_constrastive=local_contrastive
         
-    def check_nan(self, tensor, name):
-        if torch.isnan(tensor).any():
-            logging.info(f"NaN detected in {name}")
-
     def forward(self, image_features, text_features, image_embeddings, text_embeddings, logit_scale, output_dict=False):
         similarity = torch.einsum('ctd,ipd->citp', text_embeddings, image_embeddings) # Change is here
 
@@ -242,17 +238,13 @@ class ColbertLoss(nn.Module):
         if self.global_constrastive == "image-wise" or self.global_contrastive == "all":
             for score in scores:
                 image_wise_softmax = torch.softmax(score, dim=0)
-                self.check_nan(image_wise_softmax, "image_wise_softmax")
                 image_wise_loss = -torch.log(image_wise_softmax.diag()).mean()
-                self.check_nan(image_wise_loss, "image_wise_loss")
                 loss_streams.append(image_wise_loss)
 
         if self.global_contrastive == "text-wise" or self.global_contrastive == "all":
             for score in scores:
                 text_wise_softmax = torch.softmax(score, dim=1)
-                self.check_nan(text_wise_softmax, "text_wise_softmax")
                 text_wise_loss = -torch.log(text_wise_softmax.diag()).mean()
-                self.check_nan(text_wise_loss, "text_wise_loss")
                 loss_streams.append(text_wise_loss)
 
         # Combine the losses for the final contrastive loss
