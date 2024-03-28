@@ -9,6 +9,9 @@ torchrun --nproc_per_node 1 -m finetune.main \
     --name 'test-lora' \
     --warmup 1000 \
     --batch-size 128 \
+    --colbert \
+    --colbert-local-contrastive 'all' \
+    --colbert-global-contrastive 'all' \
     --lr 1e-5 \
     --wd 0.1 \
     --epochs 1 \

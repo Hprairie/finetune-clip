@@ -108,7 +108,7 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
                         dist_model_out = dist_model(images, texts)
                     model_out.update({f'dist_{k}': v for k, v in dist_model_out.items()})
                 losses = loss(**model_out, output_dict=True)
-                print(losses)
+                #print(losses)
 
                 total_loss = sum(losses.values())
                 losses["loss"] = total_loss

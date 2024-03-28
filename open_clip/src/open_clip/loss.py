@@ -213,7 +213,7 @@ class ColbertLoss(nn.Module):
         else:
             self.dropout = None
         self.global_contrastive=global_contrastive
-        self.local_constrastive=local_contrastive
+        self.local_contrastive=local_contrastive
         
     def forward(self, image_features, text_features, image_embeddings, text_embeddings, logit_scale, output_dict=False):
         similarity = torch.einsum('ctd,ipd->citp', text_embeddings, image_embeddings) # Change is here
@@ -223,32 +223,32 @@ class ColbertLoss(nn.Module):
 
         # Apply MaxSim operator - maximum similarity across all documents for each query term, and vice versa
         scores = []
-        if self.local_contrastive == "patch-wise" or self.local_constrastive == "all":
+        if self.local_contrastive == "patch-wise" or self.local_contrastive == "all":
             # Take the maxsim for every patch
             max_sim_p = similarity.amax(dim=2).sum(dim=-1)
             scores.append(max_sim_p)
 
-        if self.local_constrastive == "token-wise" or self.local_constrastive == "all":
+        if self.local_contrastive == "token-wise" or self.local_contrastive == "all":
             # Take the maxsim for every token
             max_sim_t = similarity.amax(dim=3).sum(dim=-1)
             scores.append(max_sim_t)
 
         # Apply Constrastive Loss
         loss_streams = []
-        if self.global_constrastive == "image-wise" or self.global_contrastive == "all":
+        if self.global_contrastive == "image-wise" or self.global_contrastive == "all":
             for score in scores:
                 image_wise_softmax = torch.softmax(score, dim=0)
-                image_wise_loss = -torch.log(image_wise_softmax.diag()).mean()
+                image_wise_loss = -torch.log(image_wise_softmax.diag() + 1e-8).mean()
                 loss_streams.append(image_wise_loss)
 
         if self.global_contrastive == "text-wise" or self.global_contrastive == "all":
             for score in scores:
                 text_wise_softmax = torch.softmax(score, dim=1)
-                text_wise_loss = -torch.log(text_wise_softmax.diag()).mean()
+                text_wise_loss = -torch.log(text_wise_softmax.diag() + 1e-8).mean()
                 loss_streams.append(text_wise_loss)
 
         # Combine the losses for the final contrastive loss
-        contrastive_loss = torch.concat(loss_streams).mean()
+        contrastive_loss = torch.stack(loss_streams).mean()
         return {"contrastive_loss": contrastive_loss} if output_dict else contrastive_loss
 
 class SparcLoss(nn.Module):
