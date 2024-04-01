@@ -1,5 +1,6 @@
 import argparse
 import ast
+import os
 
 
 def get_default_params(model_name):
@@ -203,6 +204,12 @@ def parse_args(args):
         default='',
         type=str,
         help="Use a pretrained CLIP model weights with the specified tag or file path.",
+    )
+    parser.add_argument(
+            '--finetune-path',
+            default=None,
+            type=str,
+            help='Path to altered architecture log'
     )
     parser.add_argument(
         "--pretrained-image",
@@ -525,5 +532,29 @@ def parse_args(args):
     for name, val in default_params.items():
         if getattr(args, name) is None:
             setattr(args, name, val)
+
+    # Get hyper-parameter information from log file
+    finetune_params = []
+
+    unknown_vars = ['checkpoint_path', 'device', 'distill', 'distributed', 'local_rank', 'log_level', 'log_path', 'rank', 'tensorboard', 'tensorboard_path', 'wandb', 'world_size']
+
+    if args.pretrained is not None and args.finetune_path is not None:
+        with open(os.path.join(args.finetune_path, 'params.txt'), 'r') as file:
+            for line in file:
+                name, val = line.strip().split(':', 1)
+                if name in unknown_vars:
+                    continue
+                name = '--' + name.replace('_', '-')
+                val = val.strip()
+                if val in ['{}', 'None', '', 'False']:
+                    continue
+                if val == 'True':
+                    finetune_params.append(name)
+                else:
+                    finetune_params += [name, val]
+
+        finetune_params = parse_args(finetune_params)
+    
+        args.finetune_args = finetune_params
 
     return args
