@@ -17,7 +17,7 @@ def recall_at_k(
         batch_size,
         reg_retrieval
     ):
-    
+
     if reg_retrieval:
         return reg_recall_at_k(
             image_encodings,
@@ -53,7 +53,6 @@ def reg_recall_at_k(
     
     num_text = text_encodings.shape[0]
     num_im = image_encodings.shape[0]
-    captions_per_image = image_to_text_map.shape[1]
     
     # Create a hnswlib index for the image embeddings
     dim = image_encodings.shape[1]
@@ -91,7 +90,6 @@ def finegrained_recall_at_k(
 
     num_text = len(text_to_image_map)
     num_im = image_encodings.shape[0]
-    captions_per_image = image_to_text_map.shape[1]
     
     print(image_encodings.shape)
     print(text_encodings.shape)
@@ -171,3 +169,80 @@ def finegrained_recall_at_k(
         text_to_image_recall.append(recall)
 
     return text_to_image_recall
+
+def reranker_recall_at_k(
+        coarse_image_encodings,
+        coarse_text_encodings,
+        fg_image_encodings,
+        fg_text_encodings,
+        text_to_image_map,
+        image_to_text_map,
+        k_vals,
+        batch_size,
+        k_multiple
+    ):
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    fg_image_encodings = torch.cat([patches for patches in fg_image_encodings], dim=0)
+    fg_text_encodings = torch.cat([text for text in fg_text_encodings], dim=0)
+    
+    num_text = coarse_text_encodings.shape[0]
+    num_im = coarse_image_encodings.shape[0]
+    
+    # Create a hnswlib index for the image embeddings
+    dim = coarse_image_encodings.shape[1]
+    p = hnswlib.Index(space='cosine', dim=dim)
+    p.init_index(max_elements=num_im, ef_construction=200, M=16)
+    p.set_ef(50)
+    p.add_items(coarse_image_encodings.cpu().numpy())
+
+    # text-to-image recall
+    print("Text-to-image recall...")
+    text_to_image_recall = []
+    
+    print("image encodings: ", fg_image_encodings.shape)
+    print("text encodings: ", fg_text_encodings.shape)
+
+    for k in k_vals:
+        correct_recall_count = 0
+        for caption_idx in range(num_text):
+            
+            labels, distances = p.knn_query(coarse_text_encodings[caption_idx].cpu().numpy(), k=int(k*k_multiple))
+            image_matches = set(labels[0])
+
+            # For all found images calculate the similarity scores
+            top_k_images = collections.defaultdict(float)
+            caption_text_encodings = fg_text_encodings[caption_idx * 77 : (caption_idx + 1) * 77]
+
+            for match in image_matches:
+                match = int(match)
+
+                # Get patch embeddings
+                patches = fg_image_encodings[match * 49 : (match + 1) * 49]
+     
+                # Calculate Cosine similarity
+                scaled_text_embeddings = caption_text_encodings / torch.norm(caption_text_encodings, p=2, dim=-1, keepdim=True)
+                scaled_image_embeddings = patches / torch.norm(patches, p=2, dim=-1, keepdim=True)
+
+                cos_sim = scaled_text_embeddings @ scaled_image_embeddings.T
+                
+                # Max pool per embedding
+                score = torch.max(cos_sim, dim=1).values.sum()
+                top_k_images[match] = score
+
+            # Get the top k images by score
+            top_images = sorted(top_k_images.keys(), key=lambda image: top_k_images[image], reverse=True)[:k]
+
+            # Check if the correct image is in the top k images
+            correct_image = text_to_image_map[caption_idx].item()
+            if correct_image in top_images:
+                correct_recall_count += 1
+
+        # Compute recall for this k
+        print(correct_recall_count)
+        recall = correct_recall_count / num_text
+        print(recall)
+        text_to_image_recall.append(recall)
+        
+    return text_to_image_recall 

@@ -1,0 +1,13 @@
+batchsize: 128
+dataset: /scratch/09765/anshita/MSCOCO/val2017
+dataset_ann: /scratch/09765/anshita/MSCOCO/captions_val2017.json
+finetune_path: None
+k: [1, 5, 10]
+model: ViT-B-32
+name: Base-With-Base-Reranker-FG-5k
+pretrained: openai
+pretrained_reranker: openai
+reg_retrieval: True
+reranker_finetune_path: None
+reranker_model: ViT-B-32
+reranker_multiple: 5.0
