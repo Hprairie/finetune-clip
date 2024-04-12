@@ -71,6 +71,12 @@ def parse_args(args):
             help='Path to annotation file'
     )
     parser.add_argument(
+            '--second-to-last',
+            default=False,
+            action='store_true',
+            help='Return outputs from second to last layer'
+    )
+    parser.add_argument(
             '--batchsize',
             type=int,
             default=32,

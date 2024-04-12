@@ -16,7 +16,8 @@ def encode_dataset(
         clip: Union[CLIP, CustomTextCLIP],
         dataset: dutils.Dataset,
         batch_size: int = 16,
-        reg_retrieval: bool = False
+        reg_retrieval: bool = False,
+        second_to_last: bool = False
     ):
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     clip.to(device)
@@ -51,8 +52,8 @@ def encode_dataset(
             image_embeddings = clip.encode_image(images)
             text_embeddings = clip.encode_text(text)
         else:
-            _, image_embeddings = clip.encode_image(images, return_tokens=True)
-            _, text_embeddings = clip.encode_text(text, return_tokens=True)
+            _, image_embeddings = clip.encode_image(images, return_tokens=True, second_to_last=second_to_last)
+            _, text_embeddings = clip.encode_text(text, return_tokens=True, second_to_last=second_to_last)
         
         # TODO: get rid of text_to_encoding_map
         # if not reg_retrieval:

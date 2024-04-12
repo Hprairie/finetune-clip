@@ -78,7 +78,7 @@ def main(args):
     # Run Retrieval Benchmark
     logging.info("Running Benchmark...")
     if reranker_model is not None:
-        reranker_image_encodings, reranker_text_encodings, text_to_image_map, image_to_text_map, _, _ = encode_dataset(reranker_model, dataset, batch_size=args.batchsize, reg_retrieval=False)
+        reranker_image_encodings, reranker_text_encodings, text_to_image_map, image_to_text_map, _, _ = encode_dataset(reranker_model, dataset, batch_size=args.batchsize, reg_retrieval=False, second_to_last=args.second_to_last)
         
         results = reranker_recall_at_k(
                 image_encodings,
