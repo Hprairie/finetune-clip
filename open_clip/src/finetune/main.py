@@ -216,6 +216,10 @@ def main(args):
         model_kwargs['init_logit_scale'] = np.log(10)  # different from CLIP
         model_kwargs['init_logit_bias'] = -10
 
+    if args.distill:
+        assert args.grad_accum == 1
+        assert 'coca' not in args.model.lower()
+
     # args.finetune_args are loaded from the pretrained params but not used as of now
     if args.finetune_path is not None:
         model, preprocess_train, preprocess_val = create_model_and_transforms(
@@ -260,6 +264,16 @@ def main(args):
             output_dict=True,
             finetune_args=args, # This is lazy but idc
             **model_kwargs,
+        )
+
+    if args.distill:
+        # FIXME: currently assumes the model you're distilling from has the same tokenizer & transforms.
+        dist_model, _, _ = create_model_and_transforms(
+            args.distill_model, 
+            args.distill_pretrained,
+            device=device,
+            precision=args.precision,
+            output_dict=True,
         )
 
 
@@ -317,6 +331,9 @@ def main(args):
             # this doesn't exist in older PyTorch, arg only added if enabled
             ddp_args['static_graph'] = True
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device], **ddp_args)
+
+        if args.distill:
+            dist_model = torch.nn.parallel.DistributedDataParallel(dist_model, device_ids=[device], **ddp_args)
     
 
     # create optimizer and scaler
@@ -451,7 +468,7 @@ def main(args):
         if is_master(args):
             logging.info(f'Start epoch {epoch}')
 
-        train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, None, args, tb_writer=writer)
+        train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist_model, args, tb_writer=writer)
         completed_epoch = epoch + 1
 
         if any(v in data for v in ('val', 'imagenet-val', 'imagenet-v2')):
