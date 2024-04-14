@@ -25,12 +25,11 @@ cd $WORK/projects/retrieval-clip
 python benchmark/main.py \
     --dataset "$DATASETS/coco/images/val2017" \
     --dataset-ann "$DATASETS/coco/annotations/captions_val2017.json" \
-    --pretrained "logs/ViT-B-32-LoRA-Epoch1-Rank4-ColBERT-Random/checkpoints/epoch_1.pt" \
-    --finetune-path "logs/ViT-B-32-LoRA-Epoch1-Rank4-ColBERT-Random" \
-    --name "LoRA-Rank4-ColBERT-Random-Finegrain-Epoch1" \
+    --pretrained "logs/ViT-B-32-LoRA-Epoch1-Rank8-ColBERT-(TEXT,TOKEN)-CC3M/checkpoints/epoch_1.pt" \
+    --finetune-path "logs/ViT-B-32-LoRA-Epoch1-Rank8-ColBERT-(TEXT,TOKEN)-CC3M" \
+    --name "LoRA-Rank8-ColBERT-CC3M-(TEXT,TOKEN)-Finegrain-Epoch1" \
     --k 1 5 10 50 \
     --batchsize 256
-
 
 # ---------------------------------------------------
 

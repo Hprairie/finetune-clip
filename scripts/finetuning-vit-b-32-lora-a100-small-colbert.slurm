@@ -37,13 +37,16 @@ srun --cpu_bind=v --accel-bind=gn python -m finetune.main \
     --epochs 1 \
     --workers 2 \
     --model "ViT-B-32" \
-    --name "ViT-B-32-LoRA-Epoch1-Rank4-ColBERT-Random" \
-    --lora "4:1" \
+    --pretrained "openai" \
+    --name "ViT-B-32-LoRA-Rank2-Epoch1-ColBERT-(TEXT,TOKEN)" \
+    --lora "2:1" \
     --colbert \
+    --colbert-local-contrastive 'token-wise' \
+    --colbert-global-contrastive 'text-wise' \
     --report-to "wandb" \
     --wandb-project-name "ViT-B-32-Finetune" \
     --log-every-n-steps 100
 
 # ---------------------------------------------------
-#    --pretrained "openai" \
+#    --colbert-dropout 0.2 \
 
