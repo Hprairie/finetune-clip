@@ -68,9 +68,31 @@ def get_latest_checkpoint(path: str, remote : bool):
         return checkpoints[-1]
     return None
 
+def get_log_info(pretrained, finetune_path):
+    # Get hyper-parameter information from log file
+    finetune_params = []
+
+    unknown_vars = ['checkpoint_path', 'device', 'distill', 'distributed', 'local_rank', 'log_level', 'log_path', 'rank', 'tensorboard', 'tensorboard_path', 'wandb', 'world_size']
+
+    if pretrained is not None and finetune_path is not None:
+        with open(os.path.join(finetune_path, 'params.txt'), 'r') as file:
+            for line in file:
+                name, val = line.strip().split(':', 1)
+                if name in unknown_vars:
+                    continue
+                name = '--' + name.replace('_', '-')
+                val = val.strip()
+                if val in ['{}', 'None', '', 'False']:
+                    continue
+                if val == 'True':
+                    finetune_params.append(name)
+                else:
+                    finetune_params += [name, val]
+    
+    return parse_args(finetune_params)
+
 def main(args):
     args = parse_args(args)
-    args.distill = None
 
     if torch.cuda.is_available():
         # This enables tf32 on Ampere GPUs which is only 8% slower than
@@ -216,8 +238,10 @@ def main(args):
         model_kwargs['init_logit_scale'] = np.log(10)  # different from CLIP
         model_kwargs['init_logit_bias'] = -10
 
+    dist_model = None
+    args.distill = args.distill_model is not None and args.distill_pretrained is not None
     if args.distill:
-        assert args.grad_accum == 1
+        assert args.accum_freq == 1
         assert 'coca' not in args.model.lower()
 
     # args.finetune_args are loaded from the pretrained params but not used as of now
@@ -268,13 +292,28 @@ def main(args):
 
     if args.distill:
         # FIXME: currently assumes the model you're distilling from has the same tokenizer & transforms.
-        dist_model, _, _ = create_model_and_transforms(
-            args.distill_model, 
-            args.distill_pretrained,
-            device=device,
-            precision=args.precision,
-            output_dict=True,
-        )
+        if args.distill_finetune_path is not None:
+            assert args.distill_pretrained is not None, "--distill_pretrained is not set"
+            distill_args = get_log_info(args.distill_pretrained, args.distill_finetune_path)
+            dist_model, _, _ = create_model_and_transforms(
+                args.distill_model, 
+                '',
+                device=device,
+                precision=args.precision,
+                output_dict=True,
+                finetune_args=distill_args,
+                finetune_path=args.distill_pretrained,
+            )
+
+
+        else:
+            dist_model, _, _ = create_model_and_transforms(
+                args.distill_model, 
+                args.distill_pretrained,
+                device=device,
+                precision=args.precision,
+                output_dict=True,
+            )
 
 
     if args.use_bnb_linear is not None:

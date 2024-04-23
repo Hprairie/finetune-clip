@@ -76,7 +76,7 @@ def gather_embeddings( #i.e. gather tokens
     """Used to gather the embeddings from each from the entire world"""
     assert has_distributed, 'torch.distributed did not import correctly, please use a PyTorch version with support.'
     if use_horovod:
-        assert NotImplementedError
+        raise NotImplementedError
         assert hvd is not None, 'Please install horovod'
         if gather_with_grad:
             all_image_features = hvd.allgather(image_features)
@@ -214,9 +214,30 @@ class ColbertLoss(nn.Module):
             self.dropout = None
         self.global_contrastive=global_contrastive
         self.local_contrastive=local_contrastive
+
+    def get_embeddings(self, image_embeddings, text_embeddings):
+        if self.world_size > 1:
+            if self.local_loss:
+                logits_per_image, logits_per_text = image_embeddings, text_embeddings
+            else:
+                all_image_embeddings, all_text_embeddings = gather_embeddings(
+                        image_embeddings, text_embeddings,
+                        self.local_loss, self.gather_with_grad, self.rank, self.world_size, self.use_horovod)
+                logits_per_image, logits_per_text = all_image_embeddings, all_text_embeddings
+        else:
+            logits_per_image, logits_per_text = image_embeddings, text_embeddings
+        return logits_per_image, logits_per_text
+        
+    def check_nan(self, tensor, name):
+        if torch.isnan(tensor).any():
+            logging.info(f"NaN detected in {name}")
+
         
     def forward(self, image_features, text_features, image_embeddings, text_embeddings, logit_scale, output_dict=False):
-        similarity = torch.einsum('ctd,ipd->citp', text_embeddings, image_embeddings) # Change is here
+        image_embeddings, text_embeddings = self.get_embeddings(image_embeddings, text_embeddings)
+
+        # Reapplied logit_scale (We might need to retest with this)
+        similarity = torch.einsum('ctd,ipd->citp', text_embeddings, image_embeddings) * logit_scale # Change is here
 
         if self.dropout is not None:
             similarity = self.dropout(similarity)
@@ -407,8 +428,53 @@ class CoCaLoss(ClipLoss):
         return clip_loss, caption_loss
 
 class ColbertDistillClipLoss(ColbertLoss):
+    def __init__(
+            self,
+            local_loss=False,
+            gather_with_grad=False,
+            cache_labels=False,
+            rank=0,
+            world_size=1,
+            use_horovod=False,
+            similarity_metric='cosine',
+            dropout=0.,
+            global_contrastive='all',
+            local_contrastive='all',
+            include_contrastive = False,
+    ):
+        super().__init__(
+            local_loss=local_loss,
+            gather_with_grad=gather_with_grad,
+            cache_labels=cache_labels,
+            rank=rank,
+            world_size=world_size,
+            use_horovod=use_horovod,
+            similarity_metric=similarity_metric,
+            dropout=dropout,
+            global_contrastive=global_contrastive,
+            local_contrastive=local_contrastive
+        )
+        self.include_contrastive = include_contrastive
 
-    ...
+    def get_logits(self, image_features, text_features, logit_scale):
+        if self.world_size > 1:
+            all_image_features, all_text_features = gather_features(
+                image_features, text_features,
+                self.local_loss, self.gather_with_grad, self.rank, self.world_size, self.use_horovod)
+
+            if self.local_loss:
+                logits_per_image = logit_scale * image_features @ all_text_features.T
+                logits_per_text = logit_scale * text_features @ all_image_features.T
+            else:
+                logits_per_image = logit_scale * all_image_features @ all_text_features.T
+                logits_per_text = logits_per_image.T
+        else:
+            logits_per_image = logit_scale * image_features @ text_features.T
+            logits_per_text = logit_scale * text_features @ image_features.T
+        
+        return logits_per_image, logits_per_text
+    
+
     def forward(
         self,
         image_features,
@@ -417,10 +483,19 @@ class ColbertDistillClipLoss(ColbertLoss):
         text_embeddings,
         dist_image_features,
         dist_text_features,
+        dist_logit_scale,
         logit_scale,
         output_dict=False
         ):
-        similarity = torch.einsum('ctd,ipd->citp', text_embeddings, image_embeddings) # Change is here
+
+        image_embeddings, text_embeddings = self.get_embeddings(image_embeddings, text_embeddings)
+        dist_image_features, dist_text_features = self.get_logits(dist_image_features, dist_text_features, dist_logit_scale)
+
+        # Reapplied logit_scale (We might need to retest with this)
+        similarity = torch.einsum('ctd,ipd->citp', text_embeddings, image_embeddings) * logit_scale # Change is here
+
+        # Distill Similarity
+        distill_similarity = torch.einsum("cd,id->ci", dist_text_features, dist_image_features)
 
         if self.dropout is not None:
             similarity = self.dropout(similarity)
@@ -451,9 +526,33 @@ class ColbertDistillClipLoss(ColbertLoss):
                 text_wise_loss = -torch.log(text_wise_softmax.diag() + 1e-8).mean()
                 loss_streams.append(text_wise_loss)
 
+        # Apply Distillation Loss
+        # Should these be means or sums
+        distill_loss_streams = []
+        if self.global_contrastive == "image-wise" or self.global_contrastive == "all":
+            for score in scores:
+                image_wise_softmax = torch.softmax(score, dim=0)
+                dist_image_wise_softmax = torch.softmax(distill_similarity, dim=0)
+                image_wise_nll = dist_image_wise_softmax * (-torch.log(image_wise_softmax + 1e-8))
+                image_wise_loss = image_wise_nll.sum(dim=0).mean(dim=0)
+                distill_loss_streams.append(image_wise_loss)
+
+        # Add log softmax
+        if self.global_contrastive == "text-wise" or self.global_contrastive == "all":
+            for score in scores:
+                text_wise_softmax = torch.softmax(score, dim=1)
+                dist_text_wise_softmax = torch.softmax(distill_similarity, dim=1)
+                text_wise_nll = dist_text_wise_softmax * (-torch.log(text_wise_softmax + 1e-8))
+                text_wise_loss = text_wise_nll.sum(dim=1).mean(dim=0)
+                distill_loss_streams.append(text_wise_loss)
+
         # Combine the losses for the final contrastive loss
         contrastive_loss = torch.stack(loss_streams).mean()
-        return {"contrastive_loss": contrastive_loss} if output_dict else contrastive_loss
+        distill_loss = torch.stack(distill_loss_streams).mean()
+        if self.include_contrastive:
+            return {"contrastive_loss": contrastive_loss, "distill_loss": distill_loss} if output_dict else (contrastive_loss, distill_loss)
+        else:
+            return {"distill_loss": distill_loss} if output_dict else distill_loss
 
 class DistillClipLoss(ClipLoss):
 

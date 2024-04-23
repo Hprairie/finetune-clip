@@ -449,6 +449,27 @@ def parse_args(args):
         action="store_true",
         help='Use SigLip (sigmoid) loss.'
     )
+    parser.add_argument(
+        "--distill-model",
+        default=None,
+        help='Which model arch to distill from, if any.'
+    )
+    parser.add_argument(
+        "--distill-pretrained",
+        default=None,
+        help='Which pre-trained weights to distill from, if any.'
+    )
+    parser.add_argument(
+        "--distill-finetune-path",
+        default=None,
+        help="If using local weights, the path to the log directory so that args can be auto infered."
+    )
+    parser.add_argument(
+        "--distill-include-contrastive",
+        default=False,
+        action="store_true",
+        help="Wether to include the contrastive loss in back propigation when distilling models"
+    )
 
     # ======================================================================= #
     parser.add_argument(
