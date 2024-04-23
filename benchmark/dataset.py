@@ -30,6 +30,7 @@ def encode_dataset(
 
     image_encodings = []
     text_encodings = []
+    all_masks = []
 
     text_index = 0
     image_index = 0
@@ -40,13 +41,15 @@ def encode_dataset(
 
     dataloader = dutils.DataLoader(dataset, batch_size=batch_size, shuffle=False)
     
-    for images, text in tqdm(dataloader):
+    for images, (text, masks) in tqdm(dataloader):
         images = images.to(device)
         text = text.to(device)
+        masks = masks.to(device)
         
         # B x 5 x 77 -> (B*5) x 77
         batch_size, captions_per_image, _ = text.shape
         text = rearrange(text, 'b s e -> (b s) e')
+        masks = rearrange(masks, 'b s -> (b s)')
 
         if reg_retrieval:
             image_embeddings = clip.encode_image(images)
@@ -62,6 +65,7 @@ def encode_dataset(
 
         image_encodings.append(image_embeddings)
         text_encodings.append(text_embeddings)
+        all_masks.append(masks)
 
         # Update text_to_image_map and image_to_text_map for this batch
         for i in range(batch_size):
@@ -81,6 +85,7 @@ def encode_dataset(
 
     image_encodings = torch.cat(image_encodings)
     text_encodings = torch.cat(text_encodings)
+    all_masks = torch.cat(all_masks)
     
     text_to_image_map = torch.LongTensor(text_to_image_map).to(device)
     image_to_text_map = torch.LongTensor(image_to_text_map).to(device)
@@ -92,14 +97,14 @@ def encode_dataset(
     #image_encodings = image_encodings / image_encodings.norm(dim=-1, keepdim=True)
     #text_encodings = text_encodings / text_encodings.norm(dim=-1, keepdim=True)
 
-    return image_encodings, text_encodings, text_to_image_map, image_to_text_map, patch_to_image_map, text_to_encoding_map
+    return image_encodings, text_encodings, text_to_image_map, image_to_text_map, patch_to_image_map, text_to_encoding_map, all_masks
 
-def get_dataset(args, transform, tokenizer):
+def get_dataset(args, transform, tokenizer, return_mask, repeat_tokens):
     dataset = CocoCaptions(
         root=args.dataset,
         annFile=args.dataset_ann,
         transform=transform,
         # Note: almost all images have 5 captions, but 12/5000 have 6, and 1/5000 has 7 - I ignore these few extra captions.
-        target_transform=lambda texts: tokenizer(texts[:5])
+        target_transform=lambda texts: tokenizer(texts[:5], return_mask=return_mask, repeat_tokens=repeat_tokens),
     )
     return dataset
