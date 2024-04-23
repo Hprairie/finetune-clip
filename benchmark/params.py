@@ -126,5 +126,4 @@ def get_log_info(pretrained, finetune_path):
                     finetune_params.append(name)
                 else:
                     finetune_params += [name, val]
-
     return training_parse_args(finetune_params)
