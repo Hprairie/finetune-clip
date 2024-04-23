@@ -10,6 +10,7 @@ import string
 from functools import lru_cache, partial
 from typing import Callable, List, Optional, Union
 import warnings
+import itertools
 
 import ftfy
 import numpy as np
@@ -217,7 +218,7 @@ class SimpleTokenizer(object):
         text = bytearray([self.byte_decoder[c] for c in text]).decode('utf-8', errors="replace").replace('</w>', ' ')
         return text
 
-    def __call__(self, texts: Union[str, List[str]], context_length: Optional[int] = None) -> torch.LongTensor:
+    def __call__(self, texts: Union[str, List[str]], context_length: Optional[int] = None, return_mask: Optional[bool] = False, repeat: Optional[bool] = False) -> torch.LongTensor:
         """ Returns the tokenized representation of given input string(s)
 
         Parameters
@@ -249,14 +250,41 @@ class SimpleTokenizer(object):
 
         all_tokens = [[self.sot_token_id] + self.encode(text) + [self.eot_token_id] for text in texts]
         result = torch.zeros(len(all_tokens), context_length, dtype=torch.long)
+        mask = torch.zeros(len(all_tokens), context_length, dtype=torch.bool)
 
-        for i, tokens in enumerate(all_tokens):
-            if len(tokens) > context_length:
-                tokens = tokens[:context_length]  # Truncate
-                tokens[-1] = self.eot_token_id
-            result[i, :len(tokens)] = torch.tensor(tokens)
+        if not repeat:
+            for i, tokens in enumerate(all_tokens):
+                length = len(tokens)
+                if len(tokens) > context_length:
+                    tokens = tokens[:context_length]  # Truncate
+                    tokens[-1] = self.eot_token_id
+                    length = context_length
+                result[i, :length] = torch.tensor(tokens)
+                mask[i, :length] = 1
+        else:
+            for i, tokens in enumerate(all_tokens):
+                tokens_tensor = torch.tensor(tokens, dtype=torch.long)
+                sot_token, eot_token = tokens_tensor[0], tokens_tensor[-1]
+                core_tokens = tokens_tensor[1:-1]
 
-        return result
+                length = core_tokens.size(0)
+                if length > 0:
+                    # Calculate the number of repetitions needed, excluding SOT and EOT slots
+                    num_repetitions = (context_length - 2) // length + (1 if (context_length - 2) % length > 0 else 0)
+                    # Repeat the core tokens
+                    repeated_tokens = core_tokens.repeat(num_repetitions)[:context_length - 2]
+                    full_sequence = torch.cat([sot_token.view(1), repeated_tokens, eot_token.view(1)])
+                else:
+                    # If no core tokens, just use SOT and EOT
+                    full_sequence = torch.tensor([sot_token, eot_token], dtype=torch.long)
+
+                result[i, :min(full_sequence.size(0), context_length)] = full_sequence[:context_length]
+                mask[i, :min(full_sequence.size(0), context_length)] = 1
+
+        if return_mask:
+            return {'tokens': result, 'mask': mask}
+        
+        return {'tokens': result}
 
 
 _tokenizer = SimpleTokenizer()

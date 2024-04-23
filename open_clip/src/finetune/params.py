@@ -545,6 +545,18 @@ def parse_args(args):
         help="Add's LoRA Modules to a model. Use to finetune a CLIP model.\n \
                 Pass str to parameter like the following = rank:alpha"
     )
+    parser.add_argument(
+        "--mask-padding",
+        default=False,
+        action="store_true",
+        help='Mask padding tokens in text.'
+    )
+    parser.add_argument(
+        "--repeat-tokens",
+        default=False,
+        action="store_true",
+        help='Repeat tokens in text.'
+    )
 
     args = parser.parse_args(args)
 
