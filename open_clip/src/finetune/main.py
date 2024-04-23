@@ -377,6 +377,8 @@ def main(args):
         (preprocess_train, preprocess_val),
         epoch=start_epoch,
         tokenizer=tokenizer,
+        mask_padding=args.mask_padding,
+        repeat_tokens=args.repeat_tokens,
     )
     assert len(data), 'At least one train or eval dataset must be specified.'
 
@@ -451,7 +453,7 @@ def main(args):
         if is_master(args):
             logging.info(f'Start epoch {epoch}')
 
-        train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, None, args, tb_writer=writer)
+        train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, None, args, tb_writer=writer, mask_padding=args.mask_padding)
         completed_epoch = epoch + 1
 
         if any(v in data for v in ('val', 'imagenet-val', 'imagenet-v2')):

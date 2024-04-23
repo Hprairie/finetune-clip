@@ -69,11 +69,11 @@ def main(args):
 
     # Get Dataset and clean
     logging.info("Fetching Dataset...")
-    dataset = get_dataset(args, preprocess, tokenizer, return_mask=args.return_mask, repeat_tokens=args.repeat_text_tokens)
+    dataset = get_dataset(args, preprocess, tokenizer, mask_padding=args.mask_padding, repeat_tokens=args.repeat_tokens)
 
     # Encode Dataset
     logging.info("Encoding Dataset...")
-    image_encodings, text_encodings, text_to_image_map, image_to_text_map, patch_to_image_map, text_to_encoding_map, masks = encode_dataset(model, dataset, batch_size=args.batchsize, reg_retrieval=args.reg_retrieval)
+    image_encodings, text_encodings, text_to_image_map, image_to_text_map, patch_to_image_map, text_to_encoding_map, masks = encode_dataset(model, dataset, batch_size=args.batchsize, reg_retrieval=args.reg_retrieval, mask_padding=args.mask_padding)
 
     # Run Retrieval Benchmark
     logging.info("Running Benchmark...")
@@ -99,6 +99,7 @@ def main(args):
                 image_to_text_map,
                 patch_to_image_map,
                 text_to_encoding_map,
+                masks,
                 args.k,
                 args.batchsize,
                 args.reg_retrieval

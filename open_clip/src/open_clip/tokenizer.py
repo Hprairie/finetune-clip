@@ -282,9 +282,9 @@ class SimpleTokenizer(object):
                 mask[i, :min(full_sequence.size(0), context_length)] = 1
 
         if return_mask:
-            return result, mask
+            return {'tokens': result, 'mask': mask}
         
-        return result
+        return {'tokens': result}
 
 
 _tokenizer = SimpleTokenizer()

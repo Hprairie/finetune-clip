@@ -215,8 +215,8 @@ class ColbertLoss(nn.Module):
         self.global_contrastive=global_contrastive
         self.local_contrastive=local_contrastive
         
-    def forward(self, image_features, text_features, image_embeddings, text_embeddings, logit_scale, output_dict=False):
-        similarity = torch.einsum('ctd,ipd->citp', text_embeddings, image_embeddings) # Change is here
+    def forward(self, image_features, text_features, image_embeddings, text_embeddings, logit_scale, output_dict=False, masks=None):
+        similarity = torch.einsum('ctd,ipd->citp', text_embeddings, image_embeddings) * logit_scale
 
         if self.dropout is not None:
             similarity = self.dropout(similarity)
@@ -225,12 +225,18 @@ class ColbertLoss(nn.Module):
         scores = []
         if self.local_contrastive == "patch-wise" or self.local_contrastive == "all":
             # Take the maxsim for every patch
-            max_sim_p = similarity.amax(dim=2).sum(dim=-1)
+            if masks is not None:
+                max_sim_p = similarity.amax(dim=3).mean(dim=-1)
+            else:
+                max_sim_p = similarity.amax(dim=2).sum(dim=-1)
             scores.append(max_sim_p)
 
         if self.local_contrastive == "token-wise" or self.local_contrastive == "all":
             # Take the maxsim for every token
-            max_sim_t = similarity.amax(dim=3).sum(dim=-1)
+            if masks is not None:
+                max_sim_t = similarity.amax(dim=2).mean(dim=-1)
+            else:
+                max_sim_t = similarity.amax(dim=3).sum(dim=-1)
             scores.append(max_sim_t)
 
         # Apply Constrastive Loss

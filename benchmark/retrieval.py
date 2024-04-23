@@ -13,6 +13,7 @@ def recall_at_k(
         image_to_text_map,
         patch_to_image_map,
         text_to_encoding_map,
+        masks,
         k_vals,
         batch_size,
         reg_retrieval
@@ -35,6 +36,7 @@ def recall_at_k(
         image_to_text_map,
         patch_to_image_map,
         text_to_encoding_map,
+        masks,
         k_vals,
         batch_size
     )
@@ -81,6 +83,7 @@ def finegrained_recall_at_k(
         image_to_text_map,
         patch_to_image_map,
         text_to_encoding_map,
+        masks,
         k_vals,
         batch_size
     ):
@@ -114,19 +117,14 @@ def finegrained_recall_at_k(
             
             # Get the text encodings for this caption
             caption_text_encodings = text_encodings[caption_idx * 77 : (caption_idx + 1) * 77]
-            
-            # Get the position of the EOT token which is the highest number in the sequence
-            eot_idx = torch.argmax(caption_text_encodings[:, -1]) # <---- One thing to note is that they use the extra padding tokens 
-                                                                  #       in the ColBert paper and it help performance, would be good
-                                                                  #       to test with and without it.
-    
-            assert eot_idx <= 77
 
             # Images that we want to run full maxsim on
             image_matches = set()
             
-            # For each token in the caption until eot_idx
-            for token_idx in range(caption_idx * 77, caption_idx * 77 + eot_idx):
+            # For each token in the caption excluding padding tokens
+            for token_idx in range(caption_idx * 77, (caption_idx + 1) * 77):
+                if len(masks) > 0 and masks[token_idx] == 0:
+                    break
 
                 # Query the kNN for n_patches closest patches
                 labels, distances = p.knn_query(text_encodings[token_idx].cpu().unsqueeze(0), k=n_patches)

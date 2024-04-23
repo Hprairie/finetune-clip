@@ -17,6 +17,7 @@ def encode_dataset(
         dataset: dutils.Dataset,
         batch_size: int = 16,
         reg_retrieval: bool = False,
+        mask_padding: bool = False,
         second_to_last: bool = False
     ):
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -41,15 +42,16 @@ def encode_dataset(
 
     dataloader = dutils.DataLoader(dataset, batch_size=batch_size, shuffle=False)
     
-    for images, (text, masks) in tqdm(dataloader):
+    for images, texts_and_masks in tqdm(dataloader):
         images = images.to(device)
-        text = text.to(device)
-        masks = masks.to(device)
+        text = texts_and_masks['tokens'].to(device)
+        if mask_padding:
+            masks = texts_and_masks['mask'].to(device)
+            masks = rearrange(masks, 'b s -> (b s)')
         
         # B x 5 x 77 -> (B*5) x 77
         batch_size, captions_per_image, _ = text.shape
         text = rearrange(text, 'b s e -> (b s) e')
-        masks = rearrange(masks, 'b s -> (b s)')
 
         if reg_retrieval:
             image_embeddings = clip.encode_image(images)
@@ -65,7 +67,9 @@ def encode_dataset(
 
         image_encodings.append(image_embeddings)
         text_encodings.append(text_embeddings)
-        all_masks.append(masks)
+        
+        if mask_padding:
+            all_masks.append(masks)
 
         # Update text_to_image_map and image_to_text_map for this batch
         for i in range(batch_size):
@@ -85,7 +89,9 @@ def encode_dataset(
 
     image_encodings = torch.cat(image_encodings)
     text_encodings = torch.cat(text_encodings)
-    all_masks = torch.cat(all_masks)
+    
+    if mask_padding:
+        all_masks = torch.cat(all_masks)
     
     text_to_image_map = torch.LongTensor(text_to_image_map).to(device)
     image_to_text_map = torch.LongTensor(image_to_text_map).to(device)
@@ -99,12 +105,12 @@ def encode_dataset(
 
     return image_encodings, text_encodings, text_to_image_map, image_to_text_map, patch_to_image_map, text_to_encoding_map, all_masks
 
-def get_dataset(args, transform, tokenizer, return_mask, repeat_tokens):
+def get_dataset(args, transform, tokenizer, mask_padding, repeat_tokens):
     dataset = CocoCaptions(
         root=args.dataset,
         annFile=args.dataset_ann,
         transform=transform,
         # Note: almost all images have 5 captions, but 12/5000 have 6, and 1/5000 has 7 - I ignore these few extra captions.
-        target_transform=lambda texts: tokenizer(texts[:5], return_mask=return_mask, repeat_tokens=repeat_tokens),
+        target_transform=lambda texts: tokenizer(texts[:5], return_mask=mask_padding, repeat_tokens=repeat_tokens),
     )
     return dataset

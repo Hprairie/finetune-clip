@@ -63,13 +63,13 @@ def parse_args(args):
         help="Run regular retrieval instead of finegrained",
     )
     parser.add_argument(
-        "--return-mask",
+        "--mask_padding",
         default=False,
         action="store_true",
         help="Return masks for text tokens",
     )
     parser.add_argument(
-        "--repeat-text-tokens",
+        "--repeat-tokens",
         default=False,
         action="store_true",
         help="Repeat text tokens up until context length if less than context length",
