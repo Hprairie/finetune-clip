@@ -218,7 +218,7 @@ class SimpleTokenizer(object):
         text = bytearray([self.byte_decoder[c] for c in text]).decode('utf-8', errors="replace").replace('</w>', ' ')
         return text
 
-    def __call__(self, texts: Union[str, List[str]], context_length: Optional[int] = None, return_mask: Optional[bool] = False, repeat: Optional[bool] = False) -> torch.LongTensor:
+    def __call__(self, texts: Union[str, List[str]], context_length: Optional[int] = None, return_mask: Optional[bool] = False, repeat_tokens: Optional[bool] = False) -> torch.LongTensor:
         """ Returns the tokenized representation of given input string(s)
 
         Parameters
@@ -252,7 +252,7 @@ class SimpleTokenizer(object):
         result = torch.zeros(len(all_tokens), context_length, dtype=torch.long)
         mask = torch.zeros(len(all_tokens), context_length, dtype=torch.bool)
 
-        if not repeat:
+        if not repeat_tokens:
             for i, tokens in enumerate(all_tokens):
                 length = len(tokens)
                 if len(tokens) > context_length:

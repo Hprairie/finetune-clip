@@ -96,6 +96,7 @@ def finegrained_recall_at_k(
     
     print(image_encodings.shape)
     print(text_encodings.shape)
+    print(masks.shape)
 
     # Create a hnswlib index for the image embeddings
     dim = image_encodings.shape[1]
@@ -123,7 +124,7 @@ def finegrained_recall_at_k(
             
             # For each token in the caption excluding padding tokens
             for token_idx in range(caption_idx * 77, (caption_idx + 1) * 77):
-                if len(masks) > 0 and masks[token_idx] == 0:
+                if len(masks) > 0 and masks[caption_idx][token_idx - (caption_idx * 77)] == 0:
                     break
 
                 # Query the kNN for n_patches closest patches

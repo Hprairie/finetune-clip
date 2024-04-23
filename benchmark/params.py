@@ -63,7 +63,7 @@ def parse_args(args):
         help="Run regular retrieval instead of finegrained",
     )
     parser.add_argument(
-        "--mask_padding",
+        "--mask-padding",
         default=False,
         action="store_true",
         help="Return masks for text tokens",

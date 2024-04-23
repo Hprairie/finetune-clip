@@ -216,6 +216,9 @@ class ColbertLoss(nn.Module):
         self.local_contrastive=local_contrastive
         
     def forward(self, image_features, text_features, image_embeddings, text_embeddings, logit_scale, output_dict=False, masks=None):
+        if masks is not None:
+            text_embeddings = text_embeddings * masks.unsqueeze(-1)
+        
         similarity = torch.einsum('ctd,ipd->citp', text_embeddings, image_embeddings) * logit_scale
 
         if self.dropout is not None:

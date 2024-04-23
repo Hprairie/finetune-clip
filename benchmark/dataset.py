@@ -7,6 +7,7 @@ import json
 import argparse
 from open_clip.model import CLIP, CustomTextCLIP
 from einops import rearrange
+import logging
 from tqdm import tqdm
 
 
@@ -47,7 +48,7 @@ def encode_dataset(
         text = texts_and_masks['tokens'].to(device)
         if mask_padding:
             masks = texts_and_masks['mask'].to(device)
-            masks = rearrange(masks, 'b s -> (b s)')
+            masks = rearrange(masks, 'b s e -> (b s) e')
         
         # B x 5 x 77 -> (B*5) x 77
         batch_size, captions_per_image, _ = text.shape
