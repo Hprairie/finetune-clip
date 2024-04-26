@@ -32,7 +32,10 @@ def encode_dataset(
 
     image_encodings = []
     text_encodings = []
-    all_masks = []
+    if mask_padding:
+        all_masks = []
+    else:
+        all_masks = None
 
     text_index = 0
     image_index = 0
