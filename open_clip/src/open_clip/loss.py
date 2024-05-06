@@ -232,12 +232,31 @@ class ColbertLoss(nn.Module):
         if torch.isnan(tensor).any():
             logging.info(f"NaN detected in {name}")
 
+    def get_pairwise_mask(self, c, i, t, p, device='cpu'):
+        block_size = 2
+        mask = torch.full((c, i), float('-inf'), device=device)
         
-    def forward(self, image_features, text_features, image_embeddings, text_embeddings, logit_scale, output_dict=False, masks=None):
+        num_blocks = min(c, i) // block_size
+        
+        block = torch.zeros((block_size, block_size), device=device)
+        
+        for idx in range(num_blocks):
+            start_idx = idx * block_size
+            mask[start_idx:start_idx + block_size, start_idx:start_idx + block_size] = block
+            
+        mask = mask.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, t, p)
+        
+        return mask
+        
+    def forward(self, image_features, text_features, image_embeddings, text_embeddings, logit_scale, output_dict=False, pairwise=False, masks=None):
         if masks is not None:
             text_embeddings = text_embeddings * masks.unsqueeze(-1)
         
         similarity = torch.einsum('ctd,ipd->citp', text_embeddings, image_embeddings) * logit_scale
+        
+        if pairwise:
+            mask = self.get_pairwise_mask(*similarity.shape, device=similarity.device)
+            similarity += mask
 
         if self.dropout is not None:
             similarity = self.dropout(similarity)

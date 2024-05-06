@@ -51,7 +51,7 @@ class CsvDataset(Dataset):
             masks = tokenizer_output['mask'][0]
             return images, texts, masks
         else:
-            return images, texts, None
+            return images, texts, [0]
 
 
 class SharedEpoch:
