@@ -24,6 +24,7 @@ def get_finetuned_model(device, pretrained, finetune_args):
             image_resize_mode=finetune_args.image_resize_mode,  # only effective for inference
             aug_cfg=finetune_args.aug_cfg,
             pretrained_image=finetune_args.pretrained_image,
+            context_length=args.context_length,
             finetune_args=finetune_args,
             finetune_path=pretrained
         )
@@ -44,9 +45,6 @@ def main(args):
                 pretrained=args.pretrained,
         )
         tokenizer = get_tokenizer(args.model, args.context_length)
-    # Snip positional embeddings and attn mask to context length
-    if args.context_length is not None:
-        model.change_context_length(args.context_length)
 
     reranker_model = None
     if args.reranker_finetune_path is not None:

@@ -416,6 +416,7 @@ def create_model_and_transforms(
         output_dict: Optional[bool] = None,
         finetune_args: Optional[object] = None,
         finetune_path: Optional[str] = None,
+        context_length: Optional[int] = None,
         **model_kwargs,
 ):
     force_preprocess_cfg = merge_preprocess_kwargs(
@@ -438,6 +439,9 @@ def create_model_and_transforms(
         output_dict=output_dict,
         **model_kwargs,
     )
+
+    if context_length is not None:
+        model.change_context_length(context_length)
 
     pp_cfg = PreprocessCfg(**model.visual.preprocess_cfg)
 

@@ -264,6 +264,7 @@ def main(args):
             aug_cfg=args.aug_cfg,
             pretrained_image=args.pretrained_image,
             output_dict=True,
+            context_length=args.context_length,
             finetune_args=args,
             finetune_path=args.pretrained,
             **model_kwargs,
@@ -287,6 +288,7 @@ def main(args):
             aug_cfg=args.aug_cfg,
             pretrained_image=args.pretrained_image,
             output_dict=True,
+            context_length=args.context_length,
             finetune_args=args, # This is lazy but idc
             **model_kwargs,
         )
@@ -302,6 +304,7 @@ def main(args):
                 device=device,
                 precision=args.precision,
                 output_dict=True,
+                context_length=args.context_length,
                 finetune_args=distill_args,
                 finetune_path=args.distill_pretrained,
             )
@@ -312,11 +315,10 @@ def main(args):
                 args.distill_model, 
                 args.distill_pretrained,
                 device=device,
+                context_length=args.context_length,
                 precision=args.precision,
                 output_dict=True,
             )
-    if args.context_length is not None:
-        model.change_context_length(args.context_length)
 
     if args.use_bnb_linear is not None:
         print('=> using a layer from bitsandbytes.\n'
