@@ -382,7 +382,8 @@ def create_loss(args):
             use_horovod=args.horovod,
             dropout=args.colbert_dropout,
             local_contrastive=args.colbert_local_contrastive,
-            global_contrastive=args.colbert_global_contrastive
+            global_contrastive=args.colbert_global_contrastive,
+            pairwise_loss=args.pairwise_loss,
         )
     return ClipLoss(
         local_loss=args.local_loss,

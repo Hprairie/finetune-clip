@@ -29,6 +29,7 @@ except ImportError:
     hvd = None
 
 from open_clip import create_model_and_transforms, trace_model, get_tokenizer, create_loss
+from open_clip.model import CLIP
 from training.data import get_data
 from training.distributed import is_master, init_distributed_device, broadcast_object
 from training.logger import setup_logging
@@ -314,7 +315,8 @@ def main(args):
                 precision=args.precision,
                 output_dict=True,
             )
-
+    if args.context_length is not None:
+        model.change_context_length(args.context_length)
 
     if args.use_bnb_linear is not None:
         print('=> using a layer from bitsandbytes.\n'
@@ -427,7 +429,7 @@ def main(args):
             logging.info(f"=> loaded checkpoint '{args.resume}' (epoch {start_epoch})")
 
     # initialize datasets
-    tokenizer = get_tokenizer(args.model)
+    tokenizer = get_tokenizer(args.model, context_length=args.context_length)
     data = get_data(
         args,
         (preprocess_train, preprocess_val),
@@ -503,6 +505,8 @@ def main(args):
         evaluate(model, data, start_epoch, args, tb_writer=writer, tokenizer=tokenizer)
         return
 
+    if args.pairwise_loss and (args.batch_size // 2) * 2 != args.batch_size:
+        raise ValueError(f"When using pairwise loss, batch size must be a multiple of 2. A batch size of {args.batch_size} was passed")
     loss = create_loss(args)
 
     for epoch in range(start_epoch, args.epochs):

@@ -283,6 +283,11 @@ class CLIP(nn.Module):
         self.visual.set_grad_checkpointing(enable)
         self.transformer.grad_checkpointing = enable
 
+    def change_context_length(self, context_length):
+        self.context_length = context_length
+        self.positional_embedding = nn.Parameter(self.positional_embedding[:context_length])
+        self.attn_mask = self.attn_mask[:context_length, :context_length]
+
     def encode_image(self, image, normalize: bool = False, return_tokens: bool = False, second_to_last: bool = False):
         if return_tokens or second_to_last:
             original = self.visual.output_tokens

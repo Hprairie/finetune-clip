@@ -470,6 +470,12 @@ def parse_args(args):
         action="store_true",
         help="Wether to include the contrastive loss in back propigation when distilling models"
     )
+    parser.add_argument(
+        "--context-length",
+        default=None,
+        type=int,
+        help="Manually set the context length of the tokenizer"
+    )
 
     # ======================================================================= #
     parser.add_argument(
@@ -556,6 +562,12 @@ def parse_args(args):
         default=False,
         action="store_true",
         help='Repeat tokens in text.'
+    )
+    parser.add_argument(
+        "--pairwise-loss",
+        default=False,
+        action="store_true",
+        help="Use's a pairwise loss for contrastive learning"
     )
 
     args = parser.parse_args(args)

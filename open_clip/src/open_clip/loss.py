@@ -192,7 +192,9 @@ class ColbertLoss(nn.Module):
             similarity_metric='cosine',
             dropout=0.,
             global_contrastive='all',
-            local_contrastive='all'
+            local_contrastive='all',
+            pairwise_loss=False,
+            clip_context_length=None
     ):
         super().__init__()
         self.local_loss = local_loss
@@ -214,6 +216,7 @@ class ColbertLoss(nn.Module):
             self.dropout = None
         self.global_contrastive=global_contrastive
         self.local_contrastive=local_contrastive
+        self.pairwise_loss = pairwise_loss
 
     def get_embeddings(self, image_embeddings, text_embeddings):
         if self.world_size > 1:
@@ -232,9 +235,9 @@ class ColbertLoss(nn.Module):
         if torch.isnan(tensor).any():
             logging.info(f"NaN detected in {name}")
 
-    def get_pairwise_mask(self, c, i, t, p, device='cpu'):
+    def get_pairwise_mask(self, c, i, device='cpu'):
         block_size = 2
-        mask = torch.full((c, i), float('-inf'), device=device)
+        mask = torch.full((c, i), float('-inf'), device=device, requires_grad=False)
         
         num_blocks = min(c, i) // block_size
         
@@ -243,20 +246,17 @@ class ColbertLoss(nn.Module):
         for idx in range(num_blocks):
             start_idx = idx * block_size
             mask[start_idx:start_idx + block_size, start_idx:start_idx + block_size] = block
-            
-        mask = mask.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, t, p)
         
         return mask
-        
-    def forward(self, image_features, text_features, image_embeddings, text_embeddings, logit_scale, output_dict=False, pairwise=False, masks=None):
+    
+    def forward(self, image_features, text_features, image_embeddings, text_embeddings, logit_scale, output_dict=False, masks=None):
         if masks is not None:
             text_embeddings = text_embeddings * masks.unsqueeze(-1)
         
         similarity = torch.einsum('ctd,ipd->citp', text_embeddings, image_embeddings) * logit_scale
         
-        if pairwise:
-            mask = self.get_pairwise_mask(*similarity.shape, device=similarity.device)
-            similarity += mask
+        c, i, _, _ = similarity.shape
+        similarity_mask = self.get_pairwise_mask(c, i, device=similarity.device) if self.pairwise_loss else None
 
         if self.dropout is not None:
             similarity = self.dropout(similarity)
@@ -283,12 +283,16 @@ class ColbertLoss(nn.Module):
         loss_streams = []
         if self.global_contrastive == "image-wise" or self.global_contrastive == "all":
             for score in scores:
+                if similarity_mask is not None:
+                    score = score + similarity_mask
                 image_wise_softmax = torch.softmax(score, dim=0)
                 image_wise_loss = -torch.log(image_wise_softmax.diag() + 1e-8).mean()
                 loss_streams.append(image_wise_loss)
 
         if self.global_contrastive == "text-wise" or self.global_contrastive == "all":
             for score in scores:
+                if similarity_mask is not None:
+                    score = score + similarity_mask
                 text_wise_softmax = torch.softmax(score, dim=1)
                 text_wise_loss = -torch.log(text_wise_softmax.diag() + 1e-8).mean()
                 loss_streams.append(text_wise_loss)

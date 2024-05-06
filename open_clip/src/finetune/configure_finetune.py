@@ -90,7 +90,7 @@ def configure_model(model: Union[CLIP, CustomTextCLIP], args, logger=None) -> CL
         """
         # Freeze Model
         for n, p in model.named_parameters():
-            p.requires_grad = False
+            p.requires_grad = False 
 
         # Add LoRa Modules
         rank, alpha = args.lora.split(':')

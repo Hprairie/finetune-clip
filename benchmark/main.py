@@ -37,13 +37,16 @@ def main(args):
 
     if args.finetune_path is not None:
         model, _, preprocess = get_finetuned_model(device, args.pretrained, args.finetune_args)
-        tokenizer = get_tokenizer(args.finetune_args.model)
+        tokenizer = get_tokenizer(args.finetune_args.model, context_length=args.context_length)
     else:
         model, _, preprocess = create_model_and_transforms(
                 model_name=args.model,
                 pretrained=args.pretrained,
         )
-        tokenizer = get_tokenizer(args.model)
+        tokenizer = get_tokenizer(args.model, args.context_length)
+    # Snip positional embeddings and attn mask to context length
+    if args.context_length is not None:
+        model.change_context_length(args.context_length)
 
     reranker_model = None
     if args.reranker_finetune_path is not None:

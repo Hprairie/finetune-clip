@@ -61,7 +61,7 @@ def backward(total_loss, scaler):
         total_loss.backward()
 
 
-def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist_model, args, tb_writer=None, mask_padding=False, pairwise=False):
+def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist_model, args, tb_writer=None, mask_padding=False):
     device = torch.device(args.device)
     autocast = get_autocast(args.precision)
     input_dtype = get_input_dtype(args.precision)
@@ -112,8 +112,8 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
                         dist_model_out = dist_model(images, texts)
                     model_out.update({f'dist_{k}': v for k, v in dist_model_out.items()})
                 
-                if args.colbert and (mask_padding or pairwise):
-                    losses = loss(**model_out, output_dict=True, pairwise=pairwise, masks=masks)
+                if args.colbert and mask_padding:
+                    losses = loss(**model_out, output_dict=True, masks=masks)
                 else:
                     losses = loss(**model_out, output_dict=True)
                 #print(losses)
