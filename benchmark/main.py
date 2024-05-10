@@ -24,7 +24,7 @@ def get_finetuned_model(device, pretrained, finetune_args):
             image_resize_mode=finetune_args.image_resize_mode,  # only effective for inference
             aug_cfg=finetune_args.aug_cfg,
             pretrained_image=finetune_args.pretrained_image,
-            context_length=args.context_length,
+            context_length=finetune_args.context_length,
             finetune_args=finetune_args,
             finetune_path=pretrained
         )
@@ -38,13 +38,13 @@ def main(args):
 
     if args.finetune_path is not None:
         model, _, preprocess = get_finetuned_model(device, args.pretrained, args.finetune_args)
-        tokenizer = get_tokenizer(args.finetune_args.model, context_length=args.context_length)
+        tokenizer = get_tokenizer(args.finetune_args.model, context_length=args.finetune_args.context_length)
     else:
         model, _, preprocess = create_model_and_transforms(
                 model_name=args.model,
                 pretrained=args.pretrained,
         )
-        tokenizer = get_tokenizer(args.model, args.context_length)
+        tokenizer = get_tokenizer(args.model, args.finetune_args.context_length)
 
     reranker_model = None
     if args.reranker_finetune_path is not None:
@@ -88,9 +88,11 @@ def main(args):
                 reranker_text_encodings,
                 text_to_image_map,
                 image_to_text_map,
+                masks,
                 args.k,
                 args.batchsize,
-                args.reranker_multiple
+                args.reranker_multiple,
+                context_length=args.finetune_args.context_length
         )
     else:
         results = recall_at_k(
@@ -103,7 +105,8 @@ def main(args):
                 masks,
                 args.k,
                 args.batchsize,
-                args.reg_retrieval
+                args.reg_retrieval,
+                context_length=args.finetune_args.context_length
         )
 
     # Save results

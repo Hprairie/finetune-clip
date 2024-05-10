@@ -16,7 +16,8 @@ def recall_at_k(
         masks,
         k_vals,
         batch_size,
-        reg_retrieval
+        reg_retrieval,
+        context_length = None,
     ):
 
     if reg_retrieval:
@@ -26,7 +27,7 @@ def recall_at_k(
             text_to_image_map,
             image_to_text_map,
             k_vals,
-            batch_size
+            batch_size,
         )
         
     return finegrained_recall_at_k(
@@ -38,7 +39,8 @@ def recall_at_k(
         text_to_encoding_map,
         masks,
         k_vals,
-        batch_size
+        batch_size,
+        context_length,
     )
         
 
@@ -85,8 +87,10 @@ def finegrained_recall_at_k(
         text_to_encoding_map,
         masks,
         k_vals,
-        batch_size
+        batch_size,
+        context_length = None,
     ):
+    context_length = context_length if context_length is not None else 77
     
     image_encodings = torch.cat([patches for patches in image_encodings], dim=0)
     text_encodings = torch.cat([text for text in text_encodings], dim=0)
@@ -116,15 +120,15 @@ def finegrained_recall_at_k(
             token_to_image_scores = {}
             
             # Get the text encodings for this caption
-            caption_text_encodings = text_encodings[caption_idx * 77 : (caption_idx + 1) * 77]
+            caption_text_encodings = text_encodings[caption_idx * context_length : (caption_idx + 1) * context_length]
             
 
             # Images that we want to run full maxsim on
             image_matches = set()
             
             # For each token in the caption excluding padding tokens
-            for token_idx in range(caption_idx * 77, (caption_idx + 1) * 77):
-                if masks is not None and masks[caption_idx][token_idx - (caption_idx * 77)] == 0:
+            for token_idx in range(caption_idx * context_length, (caption_idx + 1) * context_length):
+                if masks is not None and masks[caption_idx][token_idx - (caption_idx * context_length)] == 0:
                     break
 
                 # Query the kNN for n_patches closest patches
@@ -180,10 +184,13 @@ def reranker_recall_at_k(
         fg_text_encodings,
         text_to_image_map,
         image_to_text_map,
+        masks,
         k_vals,
         batch_size,
-        k_multiple
+        k_multiple,
+        context_length = None,
     ):
+    context_length = context_length if context_length is not None else 77
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -202,10 +209,12 @@ def reranker_recall_at_k(
 
     # text-to-image recall
     print("Text-to-image recall...")
+    print("Using Masks") if masks is not None else print("Not Using Masks")
     text_to_image_recall = []
     
     print("image encodings: ", fg_image_encodings.shape)
     print("text encodings: ", fg_text_encodings.shape)
+    import pdb;pdb.set_trace()
 
     for k in k_vals:
         correct_recall_count = 0
@@ -216,9 +225,9 @@ def reranker_recall_at_k(
 
             # For all found images calculate the similarity scores
             top_k_images = collections.defaultdict(float)
-            caption_text_encodings = fg_text_encodings[caption_idx * 77 : (caption_idx + 1) * 77]
+            caption_text_encodings = fg_text_encodings[caption_idx * context_length : (caption_idx + 1) * context_length]
             if masks is not None:
-                caption_mask = masks[caption_idx * 77 : (caption_idx + 1) * 77]
+                caption_mask = masks[caption_idx * context_length : (caption_idx + 1) * context_length]
                 caption_text_encodings = caption_text_encodings * caption_mask.unsqueeze(-1)
 
             for match in image_matches:
