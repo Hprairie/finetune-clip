@@ -32,6 +32,8 @@ def encode_dataset(
 
     image_encodings = []
     text_encodings = []
+    all_images = []
+    
     if mask_padding:
         all_masks = []
     else:
@@ -49,6 +51,8 @@ def encode_dataset(
     for images, texts_and_masks in tqdm(dataloader):
         images = images.to(device)
         text = texts_and_masks['tokens'].to(device)
+        all_images.append(images)
+        
         if mask_padding:
             masks = texts_and_masks['mask'].to(device)
             masks = rearrange(masks, 'b s e -> (b s) e')
@@ -93,6 +97,7 @@ def encode_dataset(
 
     image_encodings = torch.cat(image_encodings)
     text_encodings = torch.cat(text_encodings)
+    all_images = torch.cat(all_images)
     
     if mask_padding:
         all_masks = torch.cat(all_masks)
@@ -107,7 +112,7 @@ def encode_dataset(
     #image_encodings = image_encodings / image_encodings.norm(dim=-1, keepdim=True)
     #text_encodings = text_encodings / text_encodings.norm(dim=-1, keepdim=True)
 
-    return image_encodings, text_encodings, text_to_image_map, image_to_text_map, patch_to_image_map, text_to_encoding_map, all_masks
+    return image_encodings, text_encodings, text_to_image_map, image_to_text_map, patch_to_image_map, text_to_encoding_map, all_masks, all_images
 
 def get_dataset(args, transform, tokenizer, mask_padding, repeat_tokens):
     dataset = CocoCaptions(

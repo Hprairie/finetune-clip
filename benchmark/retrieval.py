@@ -5,6 +5,7 @@ import torch.utils.data as dutils
 from typing import List
 import logging
 import collections
+import matplotlib.pyplot as plt
 
 def recall_at_k(
         image_encodings,
@@ -189,6 +190,7 @@ def reranker_recall_at_k(
         batch_size,
         k_multiple,
         context_length = None,
+        images = None
     ):
     context_length = context_length if context_length is not None else 77
 
@@ -222,6 +224,16 @@ def reranker_recall_at_k(
             
             labels, distances = p.knn_query(coarse_text_encodings[caption_idx].cpu().numpy(), k=int(k*k_multiple))
             image_matches = set(labels[0])
+            
+            # Plot the initial matches
+            plt.figure(figsize=(10, 2))
+            for i, img_idx in enumerate(image_matches):
+                plt.subplot(1, len(image_matches), i + 1)
+                plt.imshow(images[img_idx].permute(1, 2, 0))  # Assuming images are in CxHxW format
+                plt.title(f"Initial: {img_idx}")
+                plt.axis('off')
+            plt.savefig(f"initial_matches_caption_{caption_idx}.png")
+            plt.close()
 
             # For all found images calculate the similarity scores
             top_k_images = collections.defaultdict(float)
@@ -248,6 +260,19 @@ def reranker_recall_at_k(
 
             # Get the top k images by score
             top_images = sorted(top_k_images.keys(), key=lambda image: top_k_images[image], reverse=True)[:k]
+            
+            # Plotting reranked matches
+            plt.figure(figsize=(10, 2))
+            for i, img_idx in enumerate(top_images):
+                plt.subplot(1, len(top_images), i + 1)
+                plt.imshow(images[img_idx].permute(1, 2, 0))  # Assuming images are in CxHxW format
+                if img_idx == text_to_image_map[caption_idx].item():
+                    plt.title(f"Correct: {img_idx}")
+                else:
+                    plt.title(f"Reranked: {img_idx}")
+                plt.axis('off')
+            plt.savefig(f"reranked_matches_caption_{caption_idx}.png")
+            plt.close()
 
             # Check if the correct image is in the top k images
             correct_image = text_to_image_map[caption_idx].item()
