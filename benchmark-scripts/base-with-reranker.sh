@@ -4,7 +4,7 @@
 # for TACC Lonestar6  nodes
 #----------------------------------------------------
 
-#SBATCH -J FT-CLIP                        # Job name
+#SBATCH -J BM-CLIP                        # Job name
 #SBATCH -o slurmlogs/BM-CLIP.o%j          # Name of stdout output file (%j corresponds to the job id)
 #SBATCH -e slurmlogs/BM-CLIP.e%j          # Name of stderr error file (%j corresponds to the job id)
 #SBATCH -p gpu-a100-small                 # Queue (partition) name
@@ -27,10 +27,10 @@ python benchmark/main.py \
     --dataset-ann "/scratch/09765/anshita/MSCOCO/captions_val2017.json" \
     --model "ViT-B-32" \
     --pretrained "openai" \
-    --pretrained-reranker "$WORK/research/finetune-clip/open_clip/src/logs/ViT-B-32-LoRA-Epoch1-Rank4-ColBERT-CC3M/checkpoints/epoch_1.pt" \
-    --reranker-finetune-path "$WORK/research/finetune-clip/open_clip/src/logs/ViT-B-32-LoRA-Epoch1-Rank4-ColBERT-CC3M" \
-    --name "Base-With-Reranker-LoRA-CC3M-FG-5k" \
-    --k 1 5 10 \
+    --pretrained-reranker "$WORK/research/finetune-clip/open_clip/src/logs/ViT-B-32-LoRA-Epoch1-Rank4-ColBERT-(TEXT,TOKEN)/checkpoints/epoch_1.pt" \
+    --reranker-finetune-path "$WORK/research/finetune-clip/open_clip/src/logs/ViT-B-32-LoRA-Epoch1-Rank4-ColBERT-(TEXT,TOKEN)" \
+    --name "Base-Reranker-LoRA-MSCOCO-FG-5k-Visualize" \
+    --k 1 \
     --batchsize 128 \
     --reg-retrieval \
 

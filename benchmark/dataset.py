@@ -33,6 +33,7 @@ def encode_dataset(
     image_encodings = []
     text_encodings = []
     all_images = []
+    all_captions = []  # Store all captions
     
     if mask_padding:
         all_masks = []
@@ -51,7 +52,10 @@ def encode_dataset(
     for images, texts_and_masks in tqdm(dataloader):
         images = images.to(device)
         text = texts_and_masks['tokens'].to(device)
-        all_images.append(images)
+        original_text = texts_and_masks['text']
+        all_images.append(images.cpu())
+        for caption_tuple in original_text:
+            all_captions.extend(caption_tuple)
         
         if mask_padding:
             masks = texts_and_masks['mask'].to(device)
@@ -68,11 +72,6 @@ def encode_dataset(
             _, image_embeddings = clip.encode_image(images, return_tokens=True, second_to_last=second_to_last)
             _, text_embeddings = clip.encode_text(text, return_tokens=True, second_to_last=second_to_last)
         
-        # TODO: get rid of text_to_encoding_map
-        # if not reg_retrieval:
-        #     for i, encoding in enumerate(text_embeddings):
-        #         text_to_encoding_map[text[i]] = encoding
-
         image_encodings.append(image_embeddings)
         text_encodings.append(text_embeddings)
         
@@ -108,11 +107,7 @@ def encode_dataset(
     if not reg_retrieval:
         patch_to_image_map = torch.LongTensor(patch_to_image_map).to(device)
 
-    # Normalize encodings (Why are we normalizing?)
-    #image_encodings = image_encodings / image_encodings.norm(dim=-1, keepdim=True)
-    #text_encodings = text_encodings / text_encodings.norm(dim=-1, keepdim=True)
-
-    return image_encodings, text_encodings, text_to_image_map, image_to_text_map, patch_to_image_map, text_to_encoding_map, all_masks, all_images
+    return image_encodings, text_encodings, text_to_image_map, image_to_text_map, patch_to_image_map, text_to_encoding_map, all_masks, all_images, all_captions
 
 def get_dataset(args, transform, tokenizer, mask_padding, repeat_tokens):
     dataset = CocoCaptions(

@@ -251,6 +251,7 @@ class SimpleTokenizer(object):
         all_tokens = [[self.sot_token_id] + self.encode(text) + [self.eot_token_id] for text in texts]
         result = torch.zeros(len(all_tokens), context_length, dtype=torch.long)
         mask = torch.zeros(len(all_tokens), context_length, dtype=torch.bool)
+        all_captions = []
 
         if not repeat_tokens:
             for i, tokens in enumerate(all_tokens):
@@ -261,6 +262,7 @@ class SimpleTokenizer(object):
                     length = context_length
                 result[i, :length] = torch.tensor(tokens)
                 mask[i, :length] = 1
+                all_captions.append(self.decode(tokens))
         else:
             for i, tokens in enumerate(all_tokens):
                 tokens_tensor = torch.tensor(tokens, dtype=torch.long)
@@ -282,9 +284,9 @@ class SimpleTokenizer(object):
                 mask[i, :min(full_sequence.size(0), context_length)] = 1
 
         if return_mask:
-            return {'tokens': result, 'mask': mask}
+            return {'tokens': result, 'mask': mask, 'text': all_captions}
         
-        return {'tokens': result}
+        return {'tokens': result, 'text': all_captions}
 
 
 _tokenizer = SimpleTokenizer()

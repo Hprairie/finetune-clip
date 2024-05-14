@@ -74,12 +74,12 @@ def main(args):
 
     # Encode Dataset
     logging.info("Encoding Dataset...")
-    image_encodings, text_encodings, text_to_image_map, image_to_text_map, patch_to_image_map, text_to_encoding_map, masks, images = encode_dataset(model, dataset, batch_size=args.batchsize, reg_retrieval=args.reg_retrieval, mask_padding=args.mask_padding)
+    image_encodings, text_encodings, text_to_image_map, image_to_text_map, patch_to_image_map, text_to_encoding_map, masks, images, captions = encode_dataset(model, dataset, batch_size=args.batchsize, reg_retrieval=args.reg_retrieval, mask_padding=args.mask_padding)
 
     # Run Retrieval Benchmark
     logging.info("Running Benchmark...")
     if reranker_model is not None:
-        reranker_image_encodings, reranker_text_encodings, text_to_image_map, image_to_text_map, _, _, _ = encode_dataset(reranker_model, dataset, batch_size=args.batchsize, reg_retrieval=False, second_to_last=args.second_to_last)
+        reranker_image_encodings, reranker_text_encodings, text_to_image_map, image_to_text_map, _, _, _, images, captions = encode_dataset(reranker_model, dataset, batch_size=args.batchsize, reg_retrieval=False, second_to_last=args.second_to_last)
         
         results = reranker_recall_at_k(
                 image_encodings,
@@ -93,7 +93,8 @@ def main(args):
                 args.batchsize,
                 args.reranker_multiple,
                 context_length=args.finetune_args.context_length,
-                images=images
+                images=images,
+                captions=captions
         )
     else:
         results = recall_at_k(

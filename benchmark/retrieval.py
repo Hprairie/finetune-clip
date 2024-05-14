@@ -190,9 +190,18 @@ def reranker_recall_at_k(
         batch_size,
         k_multiple,
         context_length = None,
-        images = None
+        images = None,
+        captions = None
     ):
     context_length = context_length if context_length is not None else 77
+    
+    # Assuming `images` is a tensor or numpy array of images
+    if images.dtype == torch.float32:
+        # Normalize to [0, 1] if not already
+        images = (images - images.min()) / (images.max() - images.min())
+    elif images.dtype == torch.uint8:
+        # Convert to float and scale to [0, 1]
+        images = images.float() / 255
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -216,24 +225,13 @@ def reranker_recall_at_k(
     
     print("image encodings: ", fg_image_encodings.shape)
     print("text encodings: ", fg_text_encodings.shape)
-    import pdb;pdb.set_trace()
 
     for k in k_vals:
         correct_recall_count = 0
         for caption_idx in range(num_text):
             
             labels, distances = p.knn_query(coarse_text_encodings[caption_idx].cpu().numpy(), k=int(k*k_multiple))
-            image_matches = set(labels[0])
-            
-            # Plot the initial matches
-            plt.figure(figsize=(10, 2))
-            for i, img_idx in enumerate(image_matches):
-                plt.subplot(1, len(image_matches), i + 1)
-                plt.imshow(images[img_idx].permute(1, 2, 0))  # Assuming images are in CxHxW format
-                plt.title(f"Initial: {img_idx}")
-                plt.axis('off')
-            plt.savefig(f"initial_matches_caption_{caption_idx}.png")
-            plt.close()
+            initial_image_matches = set(labels[0])
 
             # For all found images calculate the similarity scores
             top_k_images = collections.defaultdict(float)
@@ -242,7 +240,7 @@ def reranker_recall_at_k(
                 caption_mask = masks[caption_idx * context_length : (caption_idx + 1) * context_length]
                 caption_text_encodings = caption_text_encodings * caption_mask.unsqueeze(-1)
 
-            for match in image_matches:
+            for match in initial_image_matches:
                 match = int(match)
 
                 # Get patch embeddings
@@ -259,24 +257,37 @@ def reranker_recall_at_k(
                 top_k_images[match] = score
 
             # Get the top k images by score
-            top_images = sorted(top_k_images.keys(), key=lambda image: top_k_images[image], reverse=True)[:k]
+            # TODO: make the 5*k adjustable based on reranker_multiple
+            reranked_images = sorted(top_k_images.keys(), key=lambda image: top_k_images[image], reverse=True)[:5*k]
             
-            # Plotting reranked matches
-            plt.figure(figsize=(10, 2))
-            for i, img_idx in enumerate(top_images):
-                plt.subplot(1, len(top_images), i + 1)
-                plt.imshow(images[img_idx].permute(1, 2, 0))  # Assuming images are in CxHxW format
+            # TODO: add visualize parameter to turn this on and off
+            # Plotting initial and reranked matches on separate rows
+            plt.figure(figsize=(20, 8))
+            plt.suptitle(f"Caption: {captions[caption_idx]}")
+            # Plot initial matches
+            for i, img_idx in enumerate(list(initial_image_matches)[:5]):
+                plt.subplot(2, 10, i + 1)
+                plt.imshow(images[img_idx].permute(1, 2, 0))
+                if img_idx == text_to_image_map[caption_idx].item():
+                    plt.title(f"Correct: {img_idx}")
+                else:
+                    plt.title(f"Initial: {img_idx}")
+                plt.axis('off')
+            # Plot reranked matches
+            for i, img_idx in enumerate(reranked_images):
+                plt.subplot(2, 10, i + 11)
+                plt.imshow(images[img_idx].permute(1, 2, 0))
                 if img_idx == text_to_image_map[caption_idx].item():
                     plt.title(f"Correct: {img_idx}")
                 else:
                     plt.title(f"Reranked: {img_idx}")
                 plt.axis('off')
-            plt.savefig(f"reranked_matches_caption_{caption_idx}.png")
+            plt.savefig(f"caption_{caption_idx}.png")
             plt.close()
 
             # Check if the correct image is in the top k images
             correct_image = text_to_image_map[caption_idx].item()
-            if correct_image in top_images:
+            if correct_image in reranked_images[:k]:
                 correct_recall_count += 1
 
         # Compute recall for this k
