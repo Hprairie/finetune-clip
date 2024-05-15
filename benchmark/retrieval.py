@@ -262,6 +262,9 @@ def reranker_recall_at_k(
             
             # TODO: add visualize parameter to turn this on and off
             # Plotting initial and reranked matches on separate rows
+            correct_image = text_to_image_map[caption_idx].item()
+            folder = "correct" if correct_image in initial_image_matches else "incorrect"
+            
             plt.figure(figsize=(20, 8))
             plt.suptitle(f"Caption: {captions[caption_idx]}")
             # Plot initial matches
@@ -282,7 +285,7 @@ def reranker_recall_at_k(
                 else:
                     plt.title(f"Reranked: {img_idx}")
                 plt.axis('off')
-            plt.savefig(f"caption_{caption_idx}.png")
+            plt.savefig(f"reranked_images/{folder}/caption_{caption_idx}.png")
             plt.close()
 
             # Check if the correct image is in the top k images

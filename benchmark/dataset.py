@@ -49,13 +49,11 @@ def encode_dataset(
 
     dataloader = dutils.DataLoader(dataset, batch_size=batch_size, shuffle=False)
     
-    for images, texts_and_masks in tqdm(dataloader):
+    for images, (texts_and_masks, original_texts) in tqdm(dataloader):
         images = images.to(device)
         text = texts_and_masks['tokens'].to(device)
-        original_text = texts_and_masks['text']
         all_images.append(images.cpu())
-        for caption_tuple in original_text:
-            all_captions.extend(caption_tuple)
+        all_captions.append(original_texts)
         
         if mask_padding:
             masks = texts_and_masks['mask'].to(device)
@@ -115,6 +113,6 @@ def get_dataset(args, transform, tokenizer, mask_padding, repeat_tokens):
         annFile=args.dataset_ann,
         transform=transform,
         # Note: almost all images have 5 captions, but 12/5000 have 6, and 1/5000 has 7 - I ignore these few extra captions.
-        target_transform=lambda texts: tokenizer(texts[:5], return_mask=mask_padding, repeat_tokens=repeat_tokens),
+        target_transform=lambda texts: (tokenizer(texts[:5], return_mask=mask_padding, repeat_tokens=repeat_tokens), texts[:5])
     )
     return dataset
