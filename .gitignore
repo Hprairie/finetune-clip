@@ -1,4 +1,5 @@
 logs/
 wandb/
 slurmlogs/
+reranked_images/
 __pycache__/

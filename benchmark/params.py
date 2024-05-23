@@ -81,7 +81,7 @@ def parse_args(args):
         local_args.finetune_args = get_log_info(
             local_args.pretrained, local_args.finetune_path
         )
-    local_args.finetune_args = argparse.Namespace(context_length=77)
+    # local_args.finetune_args = argparse.Namespace(context_length=77)
 
     if (
         local_args.pretrained_reranker is not None
