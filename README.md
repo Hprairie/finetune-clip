@@ -25,7 +25,7 @@ Scripts: Scripts to finetune CLIP
 
 Benchmark-scripts: Scripts to run benchmarks on different CLIP models
 
-Benchmark-results: Restults from benchmarking open_clip models
+Benchmark-results: Results from benchmarking open_clip models
 
 Open-Clip: src
 
@@ -53,7 +53,7 @@ torchrun --nproc_per_node 1 -m finetune.main \
     --log-every-n-steps 100
 ```
 
-Additional Scripts can be found in `scripts/`, I will try to make slurm and sh pairs for every script so that it can easily be run on tacc.
+Additional Scripts can be found in `scripts/`, I will try to make slurm and sh pairs for every script so that it can easily be run on TACC.
 
 ## Running Benchmarking Scripts
 
@@ -71,7 +71,7 @@ python benchmark/main.py \
 Running Benchmarking on local logs will infer how to construct the model. Otherwise, just specify model specifics when calling the benchmarking script.
 
 ## Adding New Finetuning Methods
-Go to `finetune.configure_finetune` in order to add a new method to finetune clip models. Currently the following
+Go to `finetune.configure_finetune` to add a new method to finetune clip models. Currently the following
 methods are supported.
 
 - LoRA
