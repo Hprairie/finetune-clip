@@ -74,24 +74,24 @@ Running Benchmarking on local logs will infer how to construct the model. Otherw
 Go to `finetune.configure_finetune` in order to add a new method to finetune clip models. Currently the following
 methods are supported.
 
-- LoRA (Done and tested)
-- Linear Probing (Not Implemented yet)
-- Layer Freezing (Done but tested)
+- LoRA
+- Layer Freezing 
 
-## TODO List
-- [x] Add LoRA finetuning
-- [x] Test LoRA finetuning
-- [x] Add Layerwise finetuning
-- [x] Test Layerwise finetuning
-- [ ] Add Huggingface support for LoRA
-- [ ] Add Linear Probing Finetuning
-- [ ] Test Linear Probing Fintuning
-- [x] Add Benchmarking for Colbert
-      - Mostly done just need to also add fine-tuned model support
-- [x] Add new Loss function for fine-grain training
-    - [x] Sparc
-    - [x] Colbert
-- [x] Test new Loss function for fine-grain training
-    - [x] Sparc
-    - [x] Colbert
-- [x] Add more template scripts
+## ColBERT Style Loss Functions
+
+We have several customizations to Colbert style losses.
+
+```bash
+    --colbert \ # Use a ColBert style loss
+    --colbert-dropout 0.1 \ # The probability of randomly dropping tokens before taking the MaxSim Loss
+    --colbert-local-contrastive "loss-type" \ # Whether the MaxSim will be taken with respect to "patch-wise", "token-wise", or "all"
+    --colbert-global-contrastive "loss-type" \ # Whether the contrastive loss will be taken w.r.t. "image-wise", "text-wise", or "all"
+```
+## SPARC Style Loss Functions
+
+We also support loss functions for Sparc
+```bash
+    --sparc \ # Use SPARC style loss
+    --sparc-global-lambda 1.0 \ # Set the global importance for SPARC Loss
+    --sparc-local-lambda 1.0 \ # Set the local importance for SPARC Loss
+```
