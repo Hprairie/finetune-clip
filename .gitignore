@@ -3,3 +3,7 @@ wandb/
 slurmlogs/
 reranked_images/
 __pycache__/
+benchmark-results/
+misc_test/
+benchmark-tests/
+test-scripts/
